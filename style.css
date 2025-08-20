@@ -1,0 +1,204 @@
+/* CSS Variables */
+:root {
+    --primary: #1F1F21;
+    --disabled: rgba(0, 0, 0, 0.25);
+    --background: #FFFFFF;
+    --background-secondary: rgba(255, 255, 255, 0.6);
+    --surface: rgba(0, 0, 0, 0.04);
+    --surface-active: rgba(0, 0, 0, 0.32);
+    --surface-disabled: rgba(0, 0, 0, 0.02);
+    --brand: #007AFF;
+    --brand-active: #0053AD;
+}
+
+/* Reset and base styles */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    /* Prevent zoom on all elements by default */
+    -webkit-user-zoom: fixed;
+    -moz-user-zoom: fixed;
+}
+
+html, body {
+    height: 100%;
+    overflow: hidden; /* No scrollbars */
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-size: 16px;
+    background-color: var(--background);
+    /* Disable overscroll effects */
+    overscroll-behavior: none;
+    color: var(--primary);
+    /* Better text rendering on iOS */
+    -webkit-text-size-adjust: 100%;
+    /* Prevent all browser zoom gestures */
+    touch-action: pan-x pan-y;
+    -ms-touch-action: pan-x pan-y;
+    /* Additional zoom prevention for older browsers */
+    -webkit-user-zoom: fixed;
+    -moz-user-zoom: fixed;
+    /* Prevent iOS zoom on form focus */
+    -webkit-text-size-adjust: none;
+    /* Lock viewport scale */
+    zoom: 1;
+    -moz-transform: scale(1);
+    -webkit-transform: scale(1);
+    transform: scale(1);
+}
+
+/* Fullscreen canvas */
+#drawingCanvas {
+    display: block;
+    width: 100vw;
+    height: 100vh;
+    background-color: var(--background);
+    cursor: crosshair;
+    /* Critical touch handling - allow custom zoom but prevent browser zoom */
+    touch-action: none;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+    /* Ensure canvas doesn't trigger browser zoom */
+    -webkit-user-zoom: fixed;
+    -moz-user-zoom: fixed;
+}
+
+/* Bottom toolbar */
+.toolbar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    display: flex;
+    justify-content: center;
+    padding: 8px;
+    margin: 16px;
+    border-radius: 100px;
+    /* Safe area for devices with home indicator */
+    padding-bottom: max(8px, env(safe-area-inset-bottom));
+    backdrop-filter: blur(100px);
+    background-color: var(--background-secondary);
+    /* Prevent iOS magnifying glass on toolbar */
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+    -webkit-user-drag: none;
+    -webkit-user-modify: read-only;
+    -webkit-tap-highlight-color: transparent;
+    /* Completely prevent zoom gestures in toolbar */
+    touch-action: none;
+}
+
+/* Toolbar buttons */
+.toolbar-btn {
+    height: 48px;
+    padding: 0 12px;
+    border: none;
+    border-radius: 24px;
+    background-color: var(--surface);
+    color: var(--primary);
+    font-family: 'Material Symbols Rounded';
+    font-size: 24px;
+    font-weight: 400;
+    font-style: normal;
+    line-height: 1;
+    letter-spacing: normal;
+    text-transform: none;
+    display: inline-block;
+    white-space: nowrap;
+    word-wrap: normal;
+    direction: ltr;
+    -webkit-font-feature-settings: 'liga';
+    font-feature-settings: 'liga';
+    -webkit-font-smoothing: antialiased;
+    cursor: pointer;
+    touch-action: none;
+    transition: all 0.4s ease;
+    /* Prevent text selection on buttons */
+    -webkit-user-select: none;
+    user-select: none;
+    /* Remove browser default button appearance */
+    -webkit-appearance: none;
+    appearance: none;
+    /* Remove default focus styles */
+    outline: none;
+    /* Remove tap highlight on mobile */
+    -webkit-tap-highlight-color: transparent;
+    /* Force iOS Safari to recognize active state */
+    -webkit-touch-callout: none;
+    /* Disable iOS text selection magnifying glass */
+    -webkit-user-drag: none;
+    -webkit-user-modify: read-only;
+    /* Prevent zoom on buttons specifically */
+    -webkit-user-zoom: fixed;
+    -moz-user-zoom: fixed;
+    /* Prevent any double-tap actions */
+    pointer-events: auto;
+}
+
+/* Container for undo and redo buttons that expands to fill space */
+.undo-redo-container {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    gap: 4px;
+    margin: 0 16px; /* 16px margin on left and right sides */
+}
+
+/* Make undo and redo buttons responsive to available space */
+.undo-redo-container .toolbar-btn {
+    flex: 1;
+    max-width: 120px; /* Prevent buttons from getting too wide */
+    min-width: 48px;  /* Ensure minimum touch target size */;
+}
+
+.undo-redo-container .toolbar-btn:first-child {
+    border-radius: 24px 12px 12px 24px;
+}
+
+.undo-redo-container .toolbar-btn:last-child {
+    border-radius: 12px 24px 24px 12px;
+}
+
+
+    
+
+
+.toolbar-btn:not(:disabled):active, .toolbar-btn:first-child:not(:disabled):active, .toolbar-btn:last-child:not(:disabled):active{
+    background-color: var(--surface-active);
+    padding: 0 20px;
+    transition: all 0.25s ease;
+    border-radius: 100px;
+}
+
+.toolbar-btn:disabled {
+    cursor: not-allowed;
+    color: var(--disabled);
+    transition: all 0.4s ease;
+    background-color: var(--surface-disabled);
+}
+
+/* Share button call-to-action styling */
+#shareBtn {
+    background-color: var(--brand);
+    color: white;
+}
+
+/* Share button active state - slightly lighter version of primary */
+#shareBtn:not(:disabled):active {
+    padding: 0 20px;
+    background-color: var(--brand-active);
+    transition: all 0.25s ease;
+    border-radius: 100px;
+}
+
+/* Keep disabled state the same for share button */
+#shareBtn:disabled {
+    background-color: var(--surface-disabled);
+    cursor: not-allowed;
+    color: var(--disabled);
+    transition: all 0.4s ease;
+}
+
+

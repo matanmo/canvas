@@ -1,0 +1,15 @@
+{
+  "name": "canvas-drawing-app",
+  "version": "1.0.0",
+  "description": "Vector drawing canvas with hot reload",
+  "scripts": {
+    "dev": "node server.js",
+    "simple": "node simple-server.js",
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "chokidar": "^3.5.3",
+    "ws": "^8.14.2"
+  }
+}

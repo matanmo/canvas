@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <!-- Mobile-first viewport meta - prevents browser zoom -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, shrink-to-fit=no">
+    <title>Vector Drawing Canvas</title>
+    <!-- Material Icons font -->
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20,400,0,0" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Main drawing canvas -->
+    <canvas id="drawingCanvas"></canvas>
+    
+    <!-- Minimal bottom toolbar -->
+    <div class="toolbar">
+        <button id="clearBtn" class="toolbar-btn" ontouchstart="" disabled>delete</button>
+        <div class="undo-redo-container">
+            <button id="undoBtn" class="toolbar-btn" ontouchstart="" disabled>undo</button>
+            <button id="redoBtn" class="toolbar-btn" ontouchstart="" disabled>redo</button>
+        </div>
+        <button id="shareBtn" class="toolbar-btn" ontouchstart="" disabled>ios_share</button>
+    </div>
+    
+    <script src="app.js"></script>
+</body>
+</html>
