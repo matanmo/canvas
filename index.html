@@ -15,9 +15,6 @@
     <link rel="apple-touch-icon" href="favicon.png">
     <link rel="icon" href="favicon.png">
     
-    <!-- PWA Manifest -->
-    <link rel="manifest" href="manifest.json">
-    
     <!-- Material Icons font -->
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20,400,0,0" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
@@ -63,51 +60,5 @@
     </div>
     
     <script src="app.js"></script>
-    
-    <!-- Service Worker Registration -->
-    <script>
-        // Register service worker for PWA functionality and automatic updates
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', async () => {
-                try {
-                    const registration = await navigator.serviceWorker.register('./sw.js');
-                    console.log('✅ Service Worker registered successfully:', registration.scope);
-                    
-                    // Listen for updates
-                    registration.addEventListener('updatefound', () => {
-                        const newWorker = registration.installing;
-                        console.log('🔄 New service worker found, installing...');
-                        
-                        newWorker.addEventListener('statechange', () => {
-                            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                                console.log('🆕 New content available, will refresh on next visit');
-                                // Optionally show a subtle notification to user
-                                // You can uncomment the line below if you want to notify users:
-                                // showUpdateNotification();
-                            }
-                        });
-                    });
-                    
-                    // Listen for service worker messages
-                    navigator.serviceWorker.addEventListener('message', (event) => {
-                        if (event.data && event.data.type === 'SW_UPDATED') {
-                            console.log('📱 App updated to version:', event.data.version);
-                        }
-                    });
-                    
-                } catch (error) {
-                    console.log('❌ Service Worker registration failed:', error);
-                }
-            });
-        } else {
-            console.log('Service Worker not supported in this browser');
-        }
-        
-        // Optional: Function to show update notification (currently not used)
-        function showUpdateNotification() {
-            // You can implement a subtle notification here if desired
-            console.log('💡 App has been updated and will refresh on next visit');
-        }
-    </script>
 </body>
 </html>
