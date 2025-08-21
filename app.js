@@ -746,10 +746,15 @@ class DrawingApp {
                         }
                         
                     } catch (shareError) {
-                        console.log('Native share failed:', shareError.message);
+                        console.log('Native share failed:', shareError.name, shareError.message);
                         
-                        // Check if user canceled (AbortError) vs actual sharing error
-                        if (shareError.name === 'AbortError') {
+                        // Check if user canceled vs actual sharing error
+                        // Safari iOS can throw different error types when user cancels
+                        if (shareError.name === 'AbortError' || 
+                            shareError.name === 'NotAllowedError' ||
+                            shareError.message.includes('cancel') ||
+                            shareError.message.includes('abort') ||
+                            shareError.message.includes('dismiss')) {
                             // User canceled - do nothing, no error message needed
                             return;
                         }
