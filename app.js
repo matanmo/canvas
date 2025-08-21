@@ -1004,118 +1004,139 @@ class DrawingApp {
         }
         
         try {
-            // Create the image first
+            // Create standardized image for iOS compatibility
             const bounds = this.calculateBounds();
-            const padding = 32;
-            const dpr = window.devicePixelRatio || 1;
+            const padding = 64; // Increased padding for better framing
             
-            // Create offscreen canvas for export
+            // Calculate drawing dimensions
+            const drawingWidth = bounds.maxX - bounds.minX;
+            const drawingHeight = bounds.maxY - bounds.minY;
+            
+            // Create standard image size (iOS prefers specific dimensions)
+            // Use minimum 400x400 for better thumbnail generation
+            const minSize = 400;
+            const maxSize = 1200;
+            
+            let exportWidth, exportHeight;
+            
+            if (drawingWidth <= 0 || drawingHeight <= 0) {
+                // Fallback for empty or invalid drawings
+                exportWidth = exportHeight = minSize;
+            } else {
+                // Calculate export dimensions maintaining aspect ratio
+                const aspectRatio = drawingWidth / drawingHeight;
+                
+                if (aspectRatio > 1) {
+                    // Landscape
+                    exportWidth = Math.min(maxSize, Math.max(minSize, drawingWidth + padding * 2));
+                    exportHeight = exportWidth / aspectRatio;
+                } else {
+                    // Portrait or square
+                    exportHeight = Math.min(maxSize, Math.max(minSize, drawingHeight + padding * 2));
+                    exportWidth = exportHeight * aspectRatio;
+                }
+            }
+            
+            // Ensure minimum dimensions for iOS thumbnail generation
+            exportWidth = Math.max(minSize, exportWidth);
+            exportHeight = Math.max(minSize, exportHeight);
+            
+            // Create offscreen canvas with standard dimensions
             const offscreenCanvas = document.createElement('canvas');
             const offscreenCtx = offscreenCanvas.getContext('2d');
             
-            const width = bounds.maxX - bounds.minX + padding * 2;
-            const height = bounds.maxY - bounds.minY + padding * 2;
+            // Set actual canvas size (no DPR scaling to keep it simple)
+            offscreenCanvas.width = exportWidth;
+            offscreenCanvas.height = exportHeight;
             
-            // Scale for high-DPI export
-            offscreenCanvas.width = width * dpr;
-            offscreenCanvas.height = height * dpr;
-            offscreenCtx.scale(dpr, dpr);
+            // Create solid white background (crucial for iOS thumbnail generation)
+            offscreenCtx.fillStyle = '#FFFFFF';
+            offscreenCtx.fillRect(0, 0, exportWidth, exportHeight);
             
-            // White background
-            offscreenCtx.fillStyle = 'white';
-            offscreenCtx.fillRect(0, 0, width, height);
-            
-            // Set up drawing style
+            // Set up high-quality drawing style
             offscreenCtx.strokeStyle = '#000000';
             offscreenCtx.lineWidth = this.baseLineWidth;
             offscreenCtx.lineCap = 'round';
             offscreenCtx.lineJoin = 'round';
+            offscreenCtx.imageSmoothingEnabled = true;
+            offscreenCtx.imageSmoothingQuality = 'high';
             
-            // Translate to account for bounds and padding
-            offscreenCtx.translate(-bounds.minX + padding, -bounds.minY + padding);
+            // Center the drawing in the export canvas
+            const centerX = (exportWidth - drawingWidth) / 2;
+            const centerY = (exportHeight - drawingHeight) / 2;
+            offscreenCtx.translate(centerX - bounds.minX, centerY - bounds.minY);
             
             // Render all strokes
             for (const stroke of this.strokes) {
                 this.renderStrokeToContext(offscreenCtx, stroke);
             }
             
-            // Try multiple approaches for iOS thumbnail generation
-            try {
-                // Method 1: Use toDataURL for better iOS compatibility
-                const dataURL = offscreenCanvas.toDataURL('image/png', 0.95);
-                
-                // Convert data URL to blob for sharing
-                const response = await fetch(dataURL);
-                const blob = await response.blob();
-                
-                // Generate a descriptive filename with timestamp
-                const timestamp = new Date().toISOString().slice(0, 16).replace(/[:-]/g, '').replace('T', '_');
-                const fileName = `Canvas_Drawing_${timestamp}.png`;
-                
-                // Create file with comprehensive metadata for iOS
-                const file = new File([blob], fileName, { 
-                    type: 'image/png',
-                    lastModified: Date.now()
-                });
-                
-                // Check if Web Share API is available
-                if (navigator.share) {
-                    try {
-                        // Method 2: Try comprehensive sharing data first
-                        const shareData = {
-                            files: [file],
-                            title: 'Canvas Drawing',
-                            text: 'Check out my drawing from Canvas!'
-                        };
-                        
-                        if (navigator.canShare && navigator.canShare(shareData)) {
-                            await navigator.share(shareData);
-                            return;
-                        }
-                        
-                        // Method 3: Try minimal file sharing if comprehensive fails
-                        if (navigator.canShare && navigator.canShare({ files: [file] })) {
-                            await navigator.share({ files: [file] });
-                            return;
-                        }
-                        
-                        // Method 4: For older iOS, try sharing the data URL directly
-                        if (navigator.canShare && navigator.canShare({ url: dataURL })) {
-                            await navigator.share({
-                                title: 'Canvas Drawing',
-                                text: 'Check out my drawing from Canvas!',
-                                url: dataURL
-                            });
-                            return;
-                        }
-                        
-                    } catch (shareError) {
-                        console.log('Native share failed:', shareError.name, shareError.message);
-                        
-                        // Check if user canceled vs actual sharing error
-                        if (shareError.name === 'AbortError' || 
-                            shareError.name === 'NotAllowedError' ||
-                            shareError.message.includes('cancel') ||
-                            shareError.message.includes('abort') ||
-                            shareError.message.includes('dismiss')) {
-                            // User canceled - do nothing
-                            return;
-                        }
-                        
-                        // For other errors, try the fallback method
-                        console.log('Trying fallback sharing method...');
-                        await this.fallbackShare(dataURL, fileName);
-                        return;
-                    }
+            // Generate high-quality PNG with proper format for iOS
+            console.log(`Generated image: ${exportWidth}x${exportHeight}px`);
+            
+            // Create blob directly from canvas (most reliable method)
+            offscreenCanvas.toBlob(async (blob) => {
+                if (!blob) {
+                    alert('Failed to create image. Please try again.');
+                    return;
                 }
                 
-                // Web Share API not available - try fallback
-                await this.fallbackShare(dataURL, fileName);
+                try {
+                    // Generate timestamp-based filename
+                    const timestamp = new Date().toISOString().slice(0, 16).replace(/[:-]/g, '').replace('T', '_');
+                    const fileName = `Canvas_Drawing_${timestamp}.png`;
+                    
+                    // Create file with proper metadata
+                    const file = new File([blob], fileName, { 
+                        type: 'image/png',
+                        lastModified: Date.now()
+                    });
+                    
+                    console.log(`Created file: ${fileName}, size: ${blob.size} bytes`);
+                    
+                    // Try Web Share API first
+                    if (navigator.share && navigator.canShare) {
+                        // Test if file sharing is supported
+                        if (navigator.canShare({ files: [file] })) {
+                            try {
+                                await navigator.share({
+                                    files: [file],
+                                    title: 'My Canvas Drawing'
+                                });
+                                console.log('Successfully shared via Web Share API');
+                                return;
+                            } catch (shareError) {
+                                // Handle user cancellation silently
+                                if (shareError.name === 'AbortError' || shareError.name === 'NotAllowedError') {
+                                    console.log('User canceled sharing');
+                                    return;
+                                }
+                                console.log('Web Share API failed:', shareError.message);
+                            }
+                        }
+                    }
+                    
+                    // Fallback: trigger download with helpful message
+                    const dataURL = offscreenCanvas.toDataURL('image/png', 1.0);
+                    const link = document.createElement('a');
+                    link.href = dataURL;
+                    link.download = fileName;
+                    
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    
+                    // Provide helpful instructions
+                    setTimeout(() => {
+                        alert('Your drawing was downloaded! You can now share it from your Photos app or Files.');
+                    }, 500);
+                    
+                } catch (error) {
+                    console.error('Sharing failed:', error);
+                    alert('Failed to share drawing. Please try again.');
+                }
                 
-            } catch (error) {
-                console.error('All sharing methods failed:', error);
-                alert('Failed to share drawing. Please try again.');
-            }
+            }, 'image/png', 1.0); // Maximum quality for iOS compatibility
             
         } catch (error) {
             console.error('Export failed:', error);
@@ -1123,64 +1144,6 @@ class DrawingApp {
         }
     }
 
-    // Fallback sharing method for when native sharing fails or isn't available
-    async fallbackShare(dataURL, fileName) {
-        try {
-            // Create a temporary download link for fallback sharing
-            const link = document.createElement('a');
-            link.href = dataURL;
-            link.download = fileName;
-            
-            // For iOS Safari, try to trigger native sharing through different methods
-            if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
-                // Method 1: Try to open in new tab (iOS will show share options)
-                const newWindow = window.open(dataURL, '_blank');
-                if (newWindow) {
-                    // Add message about how to share
-                    setTimeout(() => {
-                        if (newWindow && !newWindow.closed) {
-                            newWindow.close();
-                        }
-                        alert('Your drawing opened in a new tab. Use the browser\'s share button to share it!');
-                    }, 1000);
-                    return;
-                }
-                
-                // Method 2: Try to create object URL and share
-                try {
-                    const response = await fetch(dataURL);
-                    const blob = await response.blob();
-                    const objectURL = URL.createObjectURL(blob);
-                    
-                    // Open the object URL which might trigger share options
-                    const imageWindow = window.open(objectURL, '_blank');
-                    if (imageWindow) {
-                        setTimeout(() => {
-                            URL.revokeObjectURL(objectURL);
-                            if (imageWindow && !imageWindow.closed) {
-                                imageWindow.close();
-                            }
-                        }, 5000);
-                        alert('Your drawing opened in a new tab. Use your device\'s share button to share it!');
-                        return;
-                    }
-                } catch (objectURLError) {
-                    console.log('Object URL method failed:', objectURLError);
-                }
-            }
-            
-            // Method 3: Download fallback for all platforms
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            
-            alert('Your drawing has been downloaded! You can now share it from your Downloads folder.');
-            
-        } catch (fallbackError) {
-            console.error('Fallback sharing failed:', fallbackError);
-            alert('Unable to share or download the drawing. Please try again.');
-        }
-    }
 
     calculateBounds() {
         let minX = Infinity, minY = Infinity;
