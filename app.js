@@ -996,7 +996,7 @@ class DrawingApp {
         }
     }
 
-    // Share functionality - prioritizes native OS share sheet
+    // Share functionality - prioritizes native OS share sheet with proper thumbnail generation
     async share() {
         if (this.strokes.length === 0) {
             alert('No drawing to share! Draw something first.');
@@ -1044,13 +1044,34 @@ class DrawingApp {
                 // Check if Web Share API is available
                 if (navigator.share) {
                     try {
-                        const file = new File([blob], 'drawing.png', { type: 'image/png' });
+                        // Generate a descriptive filename with timestamp for better identification
+                        const timestamp = new Date().toISOString().slice(0, 16).replace(/[:-]/g, '').replace('T', '_');
+                        const fileName = `Canvas_Drawing_${timestamp}.png`;
+                        
+                        // Create file with enhanced metadata
+                        const file = new File([blob], fileName, { 
+                            type: 'image/png',
+                            lastModified: Date.now()
+                        });
+                        
+                        // Enhanced sharing data with better metadata for thumbnail generation
+                        const shareData = {
+                            files: [file],
+                            title: 'Canvas Drawing',
+                            text: 'Check out my drawing from Canvas!'
+                        };
                         
                         // Try sharing with files (preferred method for images)
+                        if (navigator.canShare && navigator.canShare(shareData)) {
+                            await navigator.share(shareData);
+                            return;
+                        }
+                        
+                        // Fallback: try sharing just the file if the full shareData isn't supported
                         if (navigator.canShare && navigator.canShare({ files: [file] })) {
                             await navigator.share({
                                 files: [file],
-                                title: 'My Drawing'
+                                title: 'Canvas Drawing'
                             });
                             return;
                         }
@@ -1082,7 +1103,7 @@ class DrawingApp {
                     console.log('Web Share API not supported in this browser/environment.');
                 }
                 
-            }, 'image/png');
+            }, 'image/png', 0.95); // Added quality parameter for better image output
             
         } catch (error) {
             console.error('Export failed:', error);
