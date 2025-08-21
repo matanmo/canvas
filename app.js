@@ -996,7 +996,7 @@ class DrawingApp {
         }
     }
 
-    // Share functionality - prioritizes native OS share sheet with proper thumbnail generation
+    // Share functionality - prioritizes native OS share sheet
     async share() {
         if (this.strokes.length === 0) {
             alert('No drawing to share! Draw something first.');
@@ -1004,146 +1004,91 @@ class DrawingApp {
         }
         
         try {
-            // Create standardized image for iOS compatibility
+            // Create the image first
             const bounds = this.calculateBounds();
-            const padding = 64; // Increased padding for better framing
+            const padding = 32;
+            const dpr = window.devicePixelRatio || 1;
             
-            // Calculate drawing dimensions
-            const drawingWidth = bounds.maxX - bounds.minX;
-            const drawingHeight = bounds.maxY - bounds.minY;
-            
-            // Create standard image size (iOS prefers specific dimensions)
-            // Use minimum 400x400 for better thumbnail generation
-            const minSize = 400;
-            const maxSize = 1200;
-            
-            let exportWidth, exportHeight;
-            
-            if (drawingWidth <= 0 || drawingHeight <= 0) {
-                // Fallback for empty or invalid drawings
-                exportWidth = exportHeight = minSize;
-            } else {
-                // Calculate export dimensions maintaining aspect ratio
-                const aspectRatio = drawingWidth / drawingHeight;
-                
-                if (aspectRatio > 1) {
-                    // Landscape
-                    exportWidth = Math.min(maxSize, Math.max(minSize, drawingWidth + padding * 2));
-                    exportHeight = exportWidth / aspectRatio;
-                } else {
-                    // Portrait or square
-                    exportHeight = Math.min(maxSize, Math.max(minSize, drawingHeight + padding * 2));
-                    exportWidth = exportHeight * aspectRatio;
-                }
-            }
-            
-            // Ensure minimum dimensions for iOS thumbnail generation
-            exportWidth = Math.max(minSize, exportWidth);
-            exportHeight = Math.max(minSize, exportHeight);
-            
-            // Create offscreen canvas with standard dimensions
+            // Create offscreen canvas for export
             const offscreenCanvas = document.createElement('canvas');
             const offscreenCtx = offscreenCanvas.getContext('2d');
             
-            // Set actual canvas size (no DPR scaling to keep it simple)
-            offscreenCanvas.width = exportWidth;
-            offscreenCanvas.height = exportHeight;
+            const width = bounds.maxX - bounds.minX + padding * 2;
+            const height = bounds.maxY - bounds.minY + padding * 2;
             
-            // Create solid white background (crucial for iOS thumbnail generation)
-            offscreenCtx.fillStyle = '#FFFFFF';
-            offscreenCtx.fillRect(0, 0, exportWidth, exportHeight);
+            // Scale for high-DPI export
+            offscreenCanvas.width = width * dpr;
+            offscreenCanvas.height = height * dpr;
+            offscreenCtx.scale(dpr, dpr);
             
-            // Set up high-quality drawing style
+            // White background
+            offscreenCtx.fillStyle = 'white';
+            offscreenCtx.fillRect(0, 0, width, height);
+            
+            // Set up drawing style
             offscreenCtx.strokeStyle = '#000000';
             offscreenCtx.lineWidth = this.baseLineWidth;
             offscreenCtx.lineCap = 'round';
             offscreenCtx.lineJoin = 'round';
-            offscreenCtx.imageSmoothingEnabled = true;
-            offscreenCtx.imageSmoothingQuality = 'high';
             
-            // Center the drawing in the export canvas
-            const centerX = (exportWidth - drawingWidth) / 2;
-            const centerY = (exportHeight - drawingHeight) / 2;
-            offscreenCtx.translate(centerX - bounds.minX, centerY - bounds.minY);
+            // Translate to account for bounds and padding
+            offscreenCtx.translate(-bounds.minX + padding, -bounds.minY + padding);
             
             // Render all strokes
             for (const stroke of this.strokes) {
                 this.renderStrokeToContext(offscreenCtx, stroke);
             }
             
-            // Generate high-quality PNG with proper format for iOS
-            console.log(`Generated image: ${exportWidth}x${exportHeight}px`);
-            
-            // Create blob directly from canvas (most reliable method)
+            // Convert to blob and share using native OS share sheet
             offscreenCanvas.toBlob(async (blob) => {
-                if (!blob) {
-                    alert('Failed to create image. Please try again.');
-                    return;
-                }
-                
-                try {
-                    // Generate timestamp-based filename
-                    const timestamp = new Date().toISOString().slice(0, 16).replace(/[:-]/g, '').replace('T', '_');
-                    const fileName = `Canvas_Drawing_${timestamp}.png`;
-                    
-                    // Create file with proper metadata
-                    const file = new File([blob], fileName, { 
-                        type: 'image/png',
-                        lastModified: Date.now()
-                    });
-                    
-                    console.log(`Created file: ${fileName}, size: ${blob.size} bytes`);
-                    
-                    // Try Web Share API first
-                    if (navigator.share && navigator.canShare) {
-                        // Test if file sharing is supported
-                        if (navigator.canShare({ files: [file] })) {
-                            try {
-                                await navigator.share({
-                                    files: [file],
-                                    title: 'My Canvas Drawing'
-                                });
-                                console.log('Successfully shared via Web Share API');
-                                return;
-                            } catch (shareError) {
-                                // Handle user cancellation silently
-                                if (shareError.name === 'AbortError' || shareError.name === 'NotAllowedError') {
-                                    console.log('User canceled sharing');
-                                    return;
-                                }
-                                console.log('Web Share API failed:', shareError.message);
-                            }
+                // Check if Web Share API is available
+                if (navigator.share) {
+                    try {
+                        const file = new File([blob], 'drawing.png', { type: 'image/png' });
+                        
+                        // Try sharing with files (preferred method for images)
+                        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                            await navigator.share({
+                                files: [file],
+                                title: 'My Drawing'
+                            });
+                            return;
                         }
+                        
+                    } catch (shareError) {
+                        console.log('Native share failed:', shareError.name, shareError.message);
+                        
+                        // Check if user canceled vs actual sharing error
+                        // Safari iOS can throw different error types when user cancels
+                        if (shareError.name === 'AbortError' || 
+                            shareError.name === 'NotAllowedError' ||
+                            shareError.message.includes('cancel') ||
+                            shareError.message.includes('abort') ||
+                            shareError.message.includes('dismiss')) {
+                            // User canceled - do nothing, no error message needed
+                            return;
+                        }
+                        
+                        // Actual sharing error - show message
+                        alert('Sharing failed. This feature requires HTTPS to work properly.');
+                        return;
                     }
-                    
-                    // Fallback: trigger download with helpful message
-                    const dataURL = offscreenCanvas.toDataURL('image/png', 1.0);
-                    const link = document.createElement('a');
-                    link.href = dataURL;
-                    link.download = fileName;
-                    
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
-                    
-                    // Provide helpful instructions
-                    setTimeout(() => {
-                        alert('Your drawing was downloaded! You can now share it from your Photos app or Files.');
-                    }, 500);
-                    
-                } catch (error) {
-                    console.error('Sharing failed:', error);
-                    alert('Failed to share drawing. Please try again.');
                 }
                 
-            }, 'image/png', 1.0); // Maximum quality for iOS compatibility
+                // Web Share API not available - only show message in development
+                if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
+                    console.log('Web Share API not available on localhost. Deploy with HTTPS to test sharing.');
+                } else {
+                    console.log('Web Share API not supported in this browser/environment.');
+                }
+                
+            }, 'image/png');
             
         } catch (error) {
             console.error('Export failed:', error);
             alert('Failed to prepare drawing for sharing. Please try again.');
         }
     }
-
 
     calculateBounds() {
         let minX = Infinity, minY = Infinity;
