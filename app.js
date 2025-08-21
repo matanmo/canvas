@@ -1,6 +1,16 @@
 // Vector Drawing Canvas App
 // Minimal implementation with smooth drawing, pan/zoom, and sharing
 
+// Detect if app is running in standalone mode (home screen web app)
+function detectStandaloneMode() {
+    if (window.navigator.standalone === true || window.matchMedia('(display-mode: standalone)').matches) {
+        document.body.classList.add('standalone-mode');
+    }
+}
+
+// Run detection when page loads
+detectStandaloneMode();
+
 // Prevent browser zoom while keeping canvas zoom
 function preventBrowserZoom() {
     // Prevent zoom with keyboard shortcuts
@@ -130,11 +140,195 @@ class DrawingApp {
         // Clear confirmation state
         this.clearConfirmMode = false;
         
+        // Splash screen state
+        this.drawingEnabled = false; // Start with drawing disabled
+        this.splashScreen = document.getElementById('splashScreen');
+        
         // Initialize
+        this.setupSplashScreen();
         this.setupCanvas();
         this.setupEventListeners();
         this.setupUI();
         this.render();
+    }
+
+    // Splash screen management
+    setupSplashScreen() {
+        // Check if user has seen the splash screen before
+        const hasSeenSplash = localStorage.getItem('canvas-app-splash-seen') === 'true';
+        
+        // Show splash screen if first time or if forced for testing
+        if (!hasSeenSplash || this.shouldShowSplashForTesting()) {
+            this.showSplashScreen();
+        } else {
+            this.hideSplashScreen();
+        }
+        
+        // Set up "Got it" button
+        const gotItBtn = document.getElementById('gotItBtn');
+        gotItBtn.addEventListener('click', () => this.dismissSplashScreen());
+        gotItBtn.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            this.dismissSplashScreen();
+        });
+        
+        // Add testing keyboard shortcuts (for development/testing)
+        this.setupTestingControls();
+        
+        // Add mobile-friendly reset gesture
+        this.setupMobileResetGesture();
+    }
+    
+    // Check if splash should be shown for testing purposes
+    shouldShowSplashForTesting() {
+        // Check for URL parameter or sessionStorage flag for testing
+        const urlParams = new URLSearchParams(window.location.search);
+        const forceShow = urlParams.get('showSplash') === 'true';
+        const resetSplash = urlParams.get('reset') === 'true';
+        const sessionForce = sessionStorage.getItem('canvas-force-splash') === 'true';
+        
+        // If reset parameter is found, clear the localStorage and show splash
+        if (resetSplash) {
+            localStorage.removeItem('canvas-app-splash-seen');
+            console.log('Splash screen reset via URL parameter');
+        }
+        
+        return forceShow || sessionForce || resetSplash;
+    }
+    
+    // Show the splash screen and disable drawing
+    showSplashScreen() {
+        this.splashScreen.classList.remove('hidden');
+        this.drawingEnabled = false;
+        console.log('Splash screen shown - drawing disabled');
+    }
+    
+    // Hide the splash screen and enable drawing
+    hideSplashScreen() {
+        this.splashScreen.classList.add('hidden');
+        
+        // Wait for the transition to complete before enabling drawing
+        setTimeout(() => {
+            this.drawingEnabled = true;
+            console.log('Splash screen hidden - drawing enabled');
+        }, 300); // 0.3 seconds to match CSS transition
+    }
+    
+    // Dismiss splash screen and remember user has seen it
+    dismissSplashScreen() {
+        this.hideSplashScreen();
+        localStorage.setItem('canvas-app-splash-seen', 'true');
+        // Clear any testing flags
+        sessionStorage.removeItem('canvas-force-splash');
+        console.log('Splash screen dismissed and saved to localStorage');
+    }
+    
+    // Testing controls for splash screen
+    setupTestingControls() {
+        // Listen for keyboard shortcuts (for testing)
+        document.addEventListener('keydown', (e) => {
+            // Ctrl/Cmd + Shift + S = Show splash screen
+            if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'S') {
+                e.preventDefault();
+                sessionStorage.setItem('canvas-force-splash', 'true');
+                this.showSplashScreen();
+                console.log('Testing: Splash screen force-shown');
+            }
+            
+            // Ctrl/Cmd + Shift + H = Hide splash screen
+            if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'H') {
+                e.preventDefault();
+                sessionStorage.removeItem('canvas-force-splash');
+                this.hideSplashScreen();
+                console.log('Testing: Splash screen force-hidden');
+            }
+            
+            // Ctrl/Cmd + Shift + R = Reset (clear localStorage)
+            if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'R') {
+                e.preventDefault();
+                localStorage.removeItem('canvas-app-splash-seen');
+                sessionStorage.removeItem('canvas-force-splash');
+                this.showSplashScreen();
+                console.log('Testing: Reset splash screen state');
+            }
+        });
+        
+        // Add a simple console method for testing
+        window.canvasSplashTesting = {
+            show: () => {
+                sessionStorage.setItem('canvas-force-splash', 'true');
+                this.showSplashScreen();
+            },
+            hide: () => {
+                sessionStorage.removeItem('canvas-force-splash');
+                this.hideSplashScreen();
+            },
+            reset: () => {
+                localStorage.removeItem('canvas-app-splash-seen');
+                sessionStorage.removeItem('canvas-force-splash');
+                this.showSplashScreen();
+            }
+        };
+        
+        console.log('Testing controls available:');
+        console.log('- canvasSplashTesting.show() - Force show splash');
+        console.log('- canvasSplashTesting.hide() - Force hide splash');
+        console.log('- canvasSplashTesting.reset() - Reset to first-time state');
+        console.log('- Ctrl/Cmd + Shift + S - Show splash');
+        console.log('- Ctrl/Cmd + Shift + H - Hide splash');
+        console.log('- Ctrl/Cmd + Shift + R - Reset splash state');
+        console.log('- Add ?reset=true to URL - Reset splash and show it');
+        console.log('- Long press on empty canvas - Reset splash state');
+    }
+    
+    // Mobile-friendly reset gesture
+    setupMobileResetGesture() {
+        let longPressTimer = null;
+        let touchStartTime = 0;
+        
+        // Add long press listener to canvas
+        this.canvas.addEventListener('touchstart', (e) => {
+            // Only trigger on empty canvas (no strokes) and when splash is hidden
+            if (this.strokes.length === 0 && this.drawingEnabled && e.touches.length === 1) {
+                touchStartTime = Date.now();
+                
+                // Set timer for long press (1.5 seconds)
+                longPressTimer = setTimeout(() => {
+                    // Reset splash screen state
+                    localStorage.removeItem('canvas-app-splash-seen');
+                    this.showSplashScreen();
+                    console.log('Splash screen reset via long press on empty canvas');
+                    
+                    // Provide haptic feedback if available
+                    if (navigator.vibrate) {
+                        navigator.vibrate(100);
+                    }
+                }, 1500);
+            }
+        }, { passive: true });
+        
+        // Cancel long press if touch moves or ends early
+        this.canvas.addEventListener('touchmove', () => {
+            if (longPressTimer) {
+                clearTimeout(longPressTimer);
+                longPressTimer = null;
+            }
+        }, { passive: true });
+        
+        this.canvas.addEventListener('touchend', (e) => {
+            if (longPressTimer) {
+                clearTimeout(longPressTimer);
+                longPressTimer = null;
+            }
+        }, { passive: true });
+        
+        this.canvas.addEventListener('touchcancel', () => {
+            if (longPressTimer) {
+                clearTimeout(longPressTimer);
+                longPressTimer = null;
+            }
+        }, { passive: true });
     }
 
     // Canvas initialization with proper high-DPI support and accurate coordinates
@@ -235,6 +429,9 @@ class DrawingApp {
 
     // Event listeners setup
     setupEventListeners() {
+        // Add aggressive iOS input actions prevention
+        this.setupIOSInputActionsPrevention();
+        
         // Use pointer events with touch/mouse fallback
         if ('PointerEvent' in window) {
             this.canvas.addEventListener('pointerdown', this.handlePointerDown.bind(this), { passive: false });
@@ -249,6 +446,83 @@ class DrawingApp {
             this.canvas.addEventListener('mousedown', this.handleMouseDown.bind(this), { passive: false });
             this.canvas.addEventListener('mousemove', this.handleMouseMove.bind(this), { passive: false });
             this.canvas.addEventListener('mouseup', this.handleMouseUp.bind(this), { passive: false });
+        }
+    }
+
+    // iOS input actions prevention - prevents context menus and text selection behaviors
+    setupIOSInputActionsPrevention() {
+        // Prevent context menu on long press or right click
+        this.canvas.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            return false;
+        }, { passive: false });
+        
+        // Prevent selection start on canvas
+        this.canvas.addEventListener('selectstart', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            return false;
+        }, { passive: false });
+        
+        // Prevent drag events that can trigger iOS behaviors
+        this.canvas.addEventListener('dragstart', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            return false;
+        }, { passive: false });
+        
+        // Additional touchstart prevention for iOS input actions
+        this.canvas.addEventListener('touchstart', (e) => {
+            // Prevent default to stop iOS from interpreting touches as text selection
+            e.preventDefault();
+            e.stopPropagation();
+        }, { passive: false, capture: true });
+        
+        // Prevent iOS from showing selection handles on touchend
+        this.canvas.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+        }, { passive: false, capture: true });
+        
+        // Prevent focus events that might trigger input behaviors
+        this.canvas.addEventListener('focus', (e) => {
+            e.preventDefault();
+            this.canvas.blur(); // Remove focus immediately
+        }, { passive: false });
+        
+        // Global prevention for the entire document when canvas is active
+        let isCanvasActive = false;
+        
+        this.canvas.addEventListener('touchstart', () => {
+            isCanvasActive = true;
+        }, { passive: true });
+        
+        document.addEventListener('touchend', () => {
+            isCanvasActive = false;
+        }, { passive: true });
+        
+        // Prevent document-level selection when canvas is active
+        document.addEventListener('selectstart', (e) => {
+            if (isCanvasActive || e.target === this.canvas) {
+                e.preventDefault();
+                e.stopPropagation();
+                return false;
+            }
+        }, { passive: false });
+        
+        // Additional prevention for iOS Safari specific behaviors
+        if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
+            // iOS-specific prevention
+            this.canvas.addEventListener('touchstart', (e) => {
+                // Clear any existing selection
+                if (window.getSelection) {
+                    window.getSelection().removeAllRanges();
+                }
+                if (document.selection) {
+                    document.selection.empty();
+                }
+            }, { passive: true });
         }
     }
 
@@ -362,6 +636,11 @@ class DrawingApp {
 
     // Drawing functions with lazy brush
     startDrawing(screenPos) {
+        // Don't start drawing if drawing is disabled (splash screen visible)
+        if (!this.drawingEnabled) {
+            return;
+        }
+        
         this.isDrawing = true;
         
         // Initialize both pointer and brush to start position for smooth drawing start
@@ -376,7 +655,8 @@ class DrawingApp {
     }
 
     continueDrawing(screenPos) {
-        if (!this.isDrawing || !this.currentStroke) return;
+        // Don't continue drawing if drawing is disabled
+        if (!this.drawingEnabled || !this.isDrawing || !this.currentStroke) return;
         
         // Update lazy brush - only add point if brush actually moved
         const brushMoved = this.updateLazyBrush(screenPos);
@@ -656,28 +936,58 @@ class DrawingApp {
     addOutsideClickListener() {
         // Bind the method so we can remove it later
         this.outsideClickHandler = this.handleOutsideClick.bind(this);
+        
+        // Create delayed handlers and store references for removal
+        this.delayedClickHandler = (e) => {
+            setTimeout(() => this.outsideClickHandler(e), 15);
+        };
+        this.delayedTouchHandler = (e) => {
+            setTimeout(() => this.outsideClickHandler(e), 15);
+        };
+        this.delayedCanvasClickHandler = (e) => {
+            setTimeout(() => this.outsideClickHandler(e), 15);
+        };
+        this.delayedCanvasTouchHandler = (e) => {
+            setTimeout(() => this.outsideClickHandler(e), 15);
+        };
+        
+        // Add a small delay to prevent race conditions with button handlers
         // Use capture phase to ensure we catch all clicks before other handlers
-        document.addEventListener('click', this.outsideClickHandler, true);
-        document.addEventListener('touchend', this.outsideClickHandler, true);
+        document.addEventListener('click', this.delayedClickHandler, true);
+        document.addEventListener('touchend', this.delayedTouchHandler, true);
         // Also listen on the canvas specifically for better coverage
-        this.canvas.addEventListener('click', this.outsideClickHandler, true);
-        this.canvas.addEventListener('touchend', this.outsideClickHandler, true);
+        this.canvas.addEventListener('click', this.delayedCanvasClickHandler, true);
+        this.canvas.addEventListener('touchend', this.delayedCanvasTouchHandler, true);
     }
     
     removeOutsideClickListener() {
-        if (this.outsideClickHandler) {
-            document.removeEventListener('click', this.outsideClickHandler, true);
-            document.removeEventListener('touchend', this.outsideClickHandler, true);
-            this.canvas.removeEventListener('click', this.outsideClickHandler, true);
-            this.canvas.removeEventListener('touchend', this.outsideClickHandler, true);
-            this.outsideClickHandler = null;
+        // Store references to the delayed handlers so we can remove them
+        if (this.delayedClickHandler) {
+            document.removeEventListener('click', this.delayedClickHandler, true);
+            this.delayedClickHandler = null;
         }
+        if (this.delayedTouchHandler) {
+            document.removeEventListener('touchend', this.delayedTouchHandler, true);
+            this.delayedTouchHandler = null;
+        }
+        if (this.delayedCanvasClickHandler) {
+            this.canvas.removeEventListener('click', this.delayedCanvasClickHandler, true);
+            this.delayedCanvasClickHandler = null;
+        }
+        if (this.delayedCanvasTouchHandler) {
+            this.canvas.removeEventListener('touchend', this.delayedCanvasTouchHandler, true);
+            this.delayedCanvasTouchHandler = null;
+        }
+        this.outsideClickHandler = null;
     }
     
     handleOutsideClick(event) {
+        // Only handle outside clicks if we're actually in confirm mode
+        if (!this.clearConfirmMode) return;
+        
         const clearBtn = document.getElementById('clearBtn');
         
-        // Check if the click was outside the clear button
+        // Check if the click was outside the clear button (original working logic)
         if (!clearBtn.contains(event.target)) {
             // Prevent the event from bubbling to avoid triggering other button actions
             event.preventDefault();
@@ -857,10 +1167,13 @@ class DrawingApp {
     }
 
     updateUI() {
-        document.getElementById('undoBtn').disabled = this.historyIndex < 0;
-        document.getElementById('redoBtn').disabled = this.historyIndex >= this.history.length - 1;
-        document.getElementById('clearBtn').disabled = this.strokes.length === 0;
-        document.getElementById('shareBtn').disabled = this.strokes.length === 0;
+        // If splash screen is visible, disable all toolbar buttons except when in confirm mode
+        const splashVisible = !this.drawingEnabled;
+        
+        document.getElementById('undoBtn').disabled = this.historyIndex < 0 || splashVisible;
+        document.getElementById('redoBtn').disabled = this.historyIndex >= this.history.length - 1 || splashVisible;
+        document.getElementById('clearBtn').disabled = this.strokes.length === 0 || splashVisible;
+        document.getElementById('shareBtn').disabled = this.strokes.length === 0 || splashVisible;
     }
 }
 

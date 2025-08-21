@@ -4,12 +4,48 @@
     <meta charset="UTF-8">
     <!-- Mobile-first viewport meta - prevents browser zoom -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, shrink-to-fit=no">
-    <title>Vector Drawing Canvas</title>
+    <!-- Prevent iOS text selection and input actions -->
+    <meta name="format-detection" content="telephone=no, date=no, email=no, address=no">
+    <title>Canvas</title>
+    
+    <!-- iOS Web App Configuration - Makes it work like a native app when added to home screen -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Canvas">
+    <link rel="apple-touch-icon" href="favicon.png">
+    <link rel="icon" href="favicon.png">
+    
     <!-- Material Icons font -->
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20,400,0,0" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+    <!-- Splash screen overlay -->
+    <div id="splashScreen" class="splash-screen hidden">
+        <div class="splash-content">
+            <h1>Hi, I'm Canvas.</h1>
+            <div class="splash-instructions">
+                <div class="instruction-item">
+                    <span class="instruction-icon">✏️</span>
+                    <span class="instruction-text">Simply draw.</span>
+                </div>
+                <div class="instruction-item">
+                    <span class="instruction-icon">🤏</span>
+                    <span class="instruction-text">Pinch to zoom in and out.</span>
+                </div>
+                <div class="instruction-item">
+                    <span class="instruction-icon">✌️</span>
+                    <span class="instruction-text">Pan using two fingers.</span>
+                </div>
+                <div class="instruction-item">
+                    <span class="instruction-icon">📤</span>
+                    <span class="instruction-text">Save your masterpiece.</span>
+                </div>
+            </div>
+            <button id="gotItBtn" class="got-it-btn">Got it</button>
+        </div>
+    </div>
+
     <!-- Main drawing canvas -->
     <canvas id="drawingCanvas"></canvas>
     
