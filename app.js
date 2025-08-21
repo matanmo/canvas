@@ -1165,24 +1165,52 @@ class DrawingApp {
 
     // UI setup and updates
     setupUI() {
-        // Use both click and touchend for better mobile support
+        // Protected button handler prevents multiple rapid calls
         const addButtonHandler = (id, handler) => {
             const btn = document.getElementById(id);
-            btn.addEventListener('click', handler);
+            let isProcessing = false;
+            let lastEventTime = 0;
             
-            // Add touchend handler for better mobile response
+            const protectedHandler = (eventType) => {
+                // Prevent multiple rapid calls within 100ms
+                const now = Date.now();
+                if (isProcessing || (now - lastEventTime) < 100) {
+                    return;
+                }
+                
+                isProcessing = true;
+                lastEventTime = now;
+                
+                // Only execute if button is not disabled
+                if (!btn.disabled) {
+                    try {
+                        handler();
+                    } catch (error) {
+                        console.error(`Button handler error for ${id}:`, error);
+                    }
+                }
+                
+                // Reset processing flag after a short delay
+                setTimeout(() => {
+                    isProcessing = false;
+                }, 50);
+            };
+            
+            // Add click handler for desktop/mouse
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                protectedHandler('click');
+            });
+            
+            // Add touchend handler for mobile with extra protection
             btn.addEventListener('touchend', (e) => {
                 e.preventDefault();
                 e.stopPropagation();
                 
-                // Only trigger if it's a single quick tap (not part of double-tap)
-                if (e.touches.length === 0) {
-                    // Small delay to ensure double-tap prevention has run
-                    setTimeout(() => {
-                        if (!btn.disabled) {
-                            handler();
-                        }
-                    }, 10);
+                // Only trigger on single finger release
+                if (e.touches.length === 0 && e.changedTouches.length === 1) {
+                    protectedHandler('touchend');
                 }
             }, { passive: false });
         };
