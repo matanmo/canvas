@@ -1066,21 +1066,40 @@ class DrawingApp {
                         }
                         
                     } catch (shareError) {
-                        console.log('Native share failed:', shareError.name, shareError.message);
+                        console.log('Native share result:', shareError.name, shareError.message);
                         
                         // Check if user canceled vs actual sharing error
-                        // Safari iOS can throw different error types when user cancels
+                        // Safari iOS and other browsers can throw different error types when user cancels
                         if (shareError.name === 'AbortError' || 
                             shareError.name === 'NotAllowedError' ||
+                            shareError.name === 'InvalidStateError' ||
                             shareError.message.includes('cancel') ||
                             shareError.message.includes('abort') ||
-                            shareError.message.includes('dismiss')) {
-                            // User canceled - do nothing, no error message needed
+                            shareError.message.includes('dismiss') ||
+                            shareError.message.includes('denied') ||
+                            shareError.message.includes('User denied')) {
+                            // User canceled or denied - do nothing, no error message needed
+                            console.log('Share canceled by user');
                             return;
                         }
                         
-                        // Actual sharing error - show message
-                        alert('Sharing failed. This feature requires HTTPS to work properly.');
+                        // Check if it's a browser/environment limitation rather than HTTPS issue
+                        if (shareError.name === 'NotSupportedError' || 
+                            shareError.message.includes('not supported') ||
+                            shareError.message.includes('not available')) {
+                            console.log('Web Share API not fully supported in this context');
+                            return;
+                        }
+                        
+                        // Only show HTTPS error for actual network/security issues
+                        if (shareError.message.includes('secure context') || 
+                            shareError.message.includes('HTTPS') ||
+                            shareError.message.includes('secure origin')) {
+                            alert('Sharing failed. This feature requires HTTPS to work properly.');
+                        } else {
+                            // For other errors, just log them without showing user error
+                            console.log('Share completed or failed silently');
+                        }
                         return;
                     }
                 }
