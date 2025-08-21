@@ -334,31 +334,118 @@ class DrawingApp {
 
     // Canvas initialization with proper high-DPI support and accurate coordinates
     setupCanvas() {
+        // Debounced resize function to prevent performance issues
+        let resizeTimeout;
         const resizeCanvas = () => {
-            const dpr = window.devicePixelRatio || 1;
-            const rect = this.canvas.getBoundingClientRect();
+            // Clear any pending resize to debounce rapid calls
+            if (resizeTimeout) {
+                clearTimeout(resizeTimeout);
+            }
             
-            // Store device pixel ratio and display dimensions
-            this.devicePixelRatio = dpr;
-            this.canvasWidth = rect.width;
-            this.canvasHeight = rect.height;
-            
-            // Set internal canvas size with device pixel ratio for crisp rendering
-            this.canvas.width = rect.width * dpr;
-            this.canvas.height = rect.height * dpr;
-            
-            // Scale context for high-DPI, but we'll handle coordinates manually
-            this.ctx.scale(dpr, dpr);
-            
-            // Set CSS size to display size
-            this.canvas.style.width = rect.width + 'px';
-            this.canvas.style.height = rect.height + 'px';
-            
-            this.isDirty = true;
+            resizeTimeout = setTimeout(() => {
+                const dpr = window.devicePixelRatio || 1;
+                const rect = this.canvas.getBoundingClientRect();
+                
+                // Store device pixel ratio and display dimensions
+                this.devicePixelRatio = dpr;
+                this.canvasWidth = rect.width;
+                this.canvasHeight = rect.height;
+                
+                // Set internal canvas size with device pixel ratio for crisp rendering
+                this.canvas.width = rect.width * dpr;
+                this.canvas.height = rect.height * dpr;
+                
+                // Scale context for high-DPI, but we'll handle coordinates manually
+                this.ctx.scale(dpr, dpr);
+                
+                // Set CSS size to display size
+                this.canvas.style.width = rect.width + 'px';
+                this.canvas.style.height = rect.height + 'px';
+                
+                this.isDirty = true;
+                
+                console.log('Canvas resized:', rect.width, 'x', rect.height, 'DPR:', dpr);
+            }, 100); // 100ms debounce
         };
         
+        // Initial setup
         resizeCanvas();
+        
+        // Listen for window resize events
         window.addEventListener('resize', resizeCanvas);
+        
+        // Listen for orientation changes specifically (mobile devices)
+        window.addEventListener('orientationchange', () => {
+            // Clear any active drawing when orientation changes to prevent coordinate issues
+            this.stopDrawing();
+            
+            // Add extra delay for orientation changes as they can be slower
+            setTimeout(() => {
+                resizeCanvas();
+                // Force recalibration of drawing coordinates
+                this.recalibrateCoordinates();
+            }, 200);
+        });
+        
+        // Listen for visual viewport changes (iOS Safari address bar, etc.)
+        if (window.visualViewport) {
+            window.visualViewport.addEventListener('resize', resizeCanvas);
+        }
+        
+        // Fallback: Periodic check for size changes (helps with some edge cases)
+        this.setupCanvasSizeWatcher();
+    }
+    
+    // Size watcher for devices that don't fire resize events properly
+    setupCanvasSizeWatcher() {
+        let lastWidth = window.innerWidth;
+        let lastHeight = window.innerHeight;
+        
+        // Check every second for size changes
+        setInterval(() => {
+            const currentWidth = window.innerWidth;
+            const currentHeight = window.innerHeight;
+            
+            if (currentWidth !== lastWidth || currentHeight !== lastHeight) {
+                console.log('Size change detected via watcher:', currentWidth, 'x', currentHeight);
+                
+                // Trigger a resize after a short delay
+                setTimeout(() => {
+                    const rect = this.canvas.getBoundingClientRect();
+                    const dpr = window.devicePixelRatio || 1;
+                    
+                    this.devicePixelRatio = dpr;
+                    this.canvasWidth = rect.width;
+                    this.canvasHeight = rect.height;
+                    
+                    this.canvas.width = rect.width * dpr;
+                    this.canvas.height = rect.height * dpr;
+                    
+                    this.ctx.scale(dpr, dpr);
+                    
+                    this.canvas.style.width = rect.width + 'px';
+                    this.canvas.style.height = rect.height + 'px';
+                    
+                    this.isDirty = true;
+                }, 100);
+                
+                lastWidth = currentWidth;
+                lastHeight = currentHeight;
+            }
+        }, 1000);
+    }
+    
+    // Recalibrate coordinate system after orientation change
+    recalibrateCoordinates() {
+        // Reset any cached coordinate calculations
+        this.pointers.clear();
+        this.isDrawing = false;
+        this.currentStroke = null;
+        
+        // Force a fresh coordinate calculation by triggering a redraw
+        this.isDirty = true;
+        
+        console.log('Coordinates recalibrated after orientation change');
     }
 
     // Coordinate transformation helpers

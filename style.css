@@ -54,6 +54,9 @@ html, body {
     display: block;
     width: 100vw;
     height: 100vh;
+    /* Ensure canvas always fills the viewport, even on orientation change */
+    min-width: 100vw;
+    min-height: 100vh;
     background-color: var(--background);
     cursor: crosshair;
     /* Critical touch handling - allow custom zoom but prevent browser zoom */
