@@ -24,12 +24,12 @@ function initializeCacheVersion() {
 
 // Files to cache - these will be downloaded and stored locally
 const STATIC_ASSETS = [
-    './',
-    './index.html',
-    './app.js',
-    './style.css',
-    './favicon.png',
-    './manifest.json'
+    '/',
+    '/index.html',
+    '/app.js',
+    '/style.css',
+    '/favicon.png',
+    '/manifest.json'
 ];
 
 // Install event - cache assets when service worker is first installed
@@ -146,8 +146,8 @@ self.addEventListener('fetch', (event) => {
             
             // Try to serve cached index.html for navigation requests
             if (event.request.mode === 'navigate') {
-                return caches.match('./index.html').then((indexResponse) => {
-                    return indexResponse || caches.match('./');
+                return caches.match('/index.html').then((indexResponse) => {
+                    return indexResponse || caches.match('/');
                 });
             }
             
