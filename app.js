@@ -1116,8 +1116,7 @@ class DrawingApp {
                         // Try sharing with files (preferred method for images)
                         if (navigator.canShare && navigator.canShare({ files: [file] })) {
                             await navigator.share({
-                                files: [file],
-                                title: 'My Drawing'
+                                files: [file]
                             });
                             return;
                         }
