@@ -28,7 +28,6 @@ html, body {
     font-size: 16px;
     font-weight: 500;
     line-height: 20px;
-    color: var(--primary);
     background-color: var(--background);
     /* Disable overscroll effects */
     overscroll-behavior: none;
@@ -369,60 +368,6 @@ body.standalone-mode .toolbar {
     z-index: 1001; /* Above splash screen */
 }
 
-/* Add to Home Screen Button */
-.add-to-home-btn {
-    position: fixed;
-    top: 16px;
-    left: 50%;
-    transform: translateX(-50%);
-    /* Safe area for notched devices */
-    top: max(16px, env(safe-area-inset-top) + 16px);
-    z-index: 100; /* Above canvas, below splash and toolbar */
-    
-    /* Button styling similar to toolbar buttons */
-    height: 48px;
-    padding: 0 16px;
-    border: none;
-    border-radius: 24px;
-    background-color: var(--surface);
-    color: var(--primary);
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    font-size: 16px;
-    font-weight: 500;
-    line-height: 1;
-    cursor: pointer;
-    touch-action: manipulation;
-    transition: all 0.4s ease;
-    
-    /* Prevent text selection and zoom */
-    -webkit-user-select: none;
-    user-select: none;
-    -webkit-appearance: none;
-    appearance: none;
-    outline: none;
-    -webkit-tap-highlight-color: transparent;
-    -webkit-touch-callout: none;
-    -webkit-user-drag: none;
-    -webkit-user-modify: read-only;
-    -webkit-user-zoom: fixed;
-    -moz-user-zoom: fixed;
-    pointer-events: auto;
-}
-
-.add-to-home-btn:active {
-    background-color: var(--surface-active);
-    padding: 0 20px;
-    transition: all 0.25s ease;
-    border-radius: 100px;
-}
-
-.add-to-home-btn.hidden {
-    opacity: 0;
-    pointer-events: none;
-    transform: translateX(-50%) translateY(-8px);
-    transition: all 0.3s ease-out;
-}
-
 /* Responsive adjustments for smaller screens */
 @media (max-height: 600px) {
     .splash-content {
@@ -444,16 +389,6 @@ body.standalone-mode .toolbar {
     
     .splash-instructions {
         margin-bottom: 32px;
-    }
-    
-    /* Adjust button size for small screens */
-    .add-to-home-btn {
-        font-size: 16px;
-        padding: 0 14px;
-    }
-    
-    .add-to-home-btn:active {
-        padding: 0 20px;
     }
 }
 

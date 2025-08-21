@@ -5,97 +5,11 @@
 function detectStandaloneMode() {
     if (window.navigator.standalone === true || window.matchMedia('(display-mode: standalone)').matches) {
         document.body.classList.add('standalone-mode');
-        return true;
     }
-    return false;
 }
 
 // Run detection when page loads
-const isStandaloneMode = detectStandaloneMode();
-
-// Add to Home Screen functionality using native share sheet
-class AddToHomeScreenManager {
-    constructor() {
-        this.addToHomeBtn = document.getElementById('addToHomeBtn');
-        this.isStandalone = isStandaloneMode;
-        
-        // Set up button click handler
-        this.setupButtonClickHandler();
-        
-        // Initially hide the button (will be shown after splash is dismissed)
-        this.addToHomeBtn.classList.add('hidden');
-    }
-    
-    // Set up button click handler to trigger share sheet
-    setupButtonClickHandler() {
-        this.addToHomeBtn.addEventListener('click', async () => {
-            try {
-                // Trigger share sheet with current page
-                if (navigator.share) {
-                    await navigator.share({
-                        title: 'Canvas Drawing App',
-                        text: 'Add this drawing app to your home screen',
-                        url: window.location.href
-                    });
-                }
-            } catch (error) {
-                // User canceled sharing - do nothing
-                if (error.name !== 'AbortError') {
-                    console.log('Share error:', error);
-                }
-            }
-        });
-        
-        // Also handle touch events for better mobile support
-        this.addToHomeBtn.addEventListener('touchend', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            
-            // Trigger click after a short delay to prevent double-triggering
-            setTimeout(() => {
-                this.addToHomeBtn.click();
-            }, 10);
-        });
-    }
-    
-    // Update button visibility based on conditions
-    updateButtonVisibility() {
-        const shouldShow = this.shouldShowButton();
-        
-        if (shouldShow) {
-            this.addToHomeBtn.classList.remove('hidden');
-        } else {
-            this.addToHomeBtn.classList.add('hidden');
-        }
-    }
-    
-    // Determine if button should be shown
-    shouldShowButton() {
-        // Don't show if in standalone mode (already installed)
-        if (this.isStandalone) {
-            return false;
-        }
-        
-        // Only show if drawing is enabled (splash screen is dismissed)
-        if (window.drawingApp && window.drawingApp.drawingEnabled) {
-            return true;
-        }
-        
-        // Default to hidden
-        return false;
-    }
-    
-    // Method to be called when splash screen state changes
-    onSplashScreenStateChange() {
-        this.updateButtonVisibility();
-    }
-}
-
-// Initialize the Add to Home Screen manager
-const addToHomeManager = new AddToHomeScreenManager();
-
-// Make it globally available for DrawingApp integration
-window.addToHomeManager = addToHomeManager;
+detectStandaloneMode();
 
 // Prevent browser zoom while keeping canvas zoom
 function preventBrowserZoom() {
@@ -289,11 +203,6 @@ class DrawingApp {
         this.splashScreen.classList.remove('hidden');
         this.drawingEnabled = false;
         console.log('Splash screen shown - drawing disabled');
-        
-        // Update Add to Home Screen button visibility
-        if (window.addToHomeManager) {
-            window.addToHomeManager.onSplashScreenStateChange();
-        }
     }
     
     // Hide the splash screen and enable drawing
@@ -304,11 +213,6 @@ class DrawingApp {
         setTimeout(() => {
             this.drawingEnabled = true;
             console.log('Splash screen hidden - drawing enabled');
-            
-            // Update Add to Home Screen button visibility
-            if (window.addToHomeManager) {
-                window.addToHomeManager.onSplashScreenStateChange();
-            }
         }, 300); // 0.3 seconds to match CSS transition
     }
     
@@ -1388,9 +1292,7 @@ class DrawingApp {
 
 // Initialize the app when DOM is loaded
 if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => {
-        window.drawingApp = new DrawingApp();
-    });
+    document.addEventListener('DOMContentLoaded', () => new DrawingApp());
 } else {
-    window.drawingApp = new DrawingApp();
+    new DrawingApp();
 }
