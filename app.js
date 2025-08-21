@@ -1039,39 +1039,52 @@ class DrawingApp {
                 this.renderStrokeToContext(offscreenCtx, stroke);
             }
             
-            // Convert to blob and share using native OS share sheet
-            offscreenCanvas.toBlob(async (blob) => {
+            // Try multiple approaches for iOS thumbnail generation
+            try {
+                // Method 1: Use toDataURL for better iOS compatibility
+                const dataURL = offscreenCanvas.toDataURL('image/png', 0.95);
+                
+                // Convert data URL to blob for sharing
+                const response = await fetch(dataURL);
+                const blob = await response.blob();
+                
+                // Generate a descriptive filename with timestamp
+                const timestamp = new Date().toISOString().slice(0, 16).replace(/[:-]/g, '').replace('T', '_');
+                const fileName = `Canvas_Drawing_${timestamp}.png`;
+                
+                // Create file with comprehensive metadata for iOS
+                const file = new File([blob], fileName, { 
+                    type: 'image/png',
+                    lastModified: Date.now()
+                });
+                
                 // Check if Web Share API is available
                 if (navigator.share) {
                     try {
-                        // Generate a descriptive filename with timestamp for better identification
-                        const timestamp = new Date().toISOString().slice(0, 16).replace(/[:-]/g, '').replace('T', '_');
-                        const fileName = `Canvas_Drawing_${timestamp}.png`;
-                        
-                        // Create file with enhanced metadata
-                        const file = new File([blob], fileName, { 
-                            type: 'image/png',
-                            lastModified: Date.now()
-                        });
-                        
-                        // Enhanced sharing data with better metadata for thumbnail generation
+                        // Method 2: Try comprehensive sharing data first
                         const shareData = {
                             files: [file],
                             title: 'Canvas Drawing',
                             text: 'Check out my drawing from Canvas!'
                         };
                         
-                        // Try sharing with files (preferred method for images)
                         if (navigator.canShare && navigator.canShare(shareData)) {
                             await navigator.share(shareData);
                             return;
                         }
                         
-                        // Fallback: try sharing just the file if the full shareData isn't supported
+                        // Method 3: Try minimal file sharing if comprehensive fails
                         if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                            await navigator.share({ files: [file] });
+                            return;
+                        }
+                        
+                        // Method 4: For older iOS, try sharing the data URL directly
+                        if (navigator.canShare && navigator.canShare({ url: dataURL })) {
                             await navigator.share({
-                                files: [file],
-                                title: 'Canvas Drawing'
+                                title: 'Canvas Drawing',
+                                text: 'Check out my drawing from Canvas!',
+                                url: dataURL
                             });
                             return;
                         }
@@ -1080,34 +1093,92 @@ class DrawingApp {
                         console.log('Native share failed:', shareError.name, shareError.message);
                         
                         // Check if user canceled vs actual sharing error
-                        // Safari iOS can throw different error types when user cancels
                         if (shareError.name === 'AbortError' || 
                             shareError.name === 'NotAllowedError' ||
                             shareError.message.includes('cancel') ||
                             shareError.message.includes('abort') ||
                             shareError.message.includes('dismiss')) {
-                            // User canceled - do nothing, no error message needed
+                            // User canceled - do nothing
                             return;
                         }
                         
-                        // Actual sharing error - show message
-                        alert('Sharing failed. This feature requires HTTPS to work properly.');
+                        // For other errors, try the fallback method
+                        console.log('Trying fallback sharing method...');
+                        await this.fallbackShare(dataURL, fileName);
                         return;
                     }
                 }
                 
-                // Web Share API not available - only show message in development
-                if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
-                    console.log('Web Share API not available on localhost. Deploy with HTTPS to test sharing.');
-                } else {
-                    console.log('Web Share API not supported in this browser/environment.');
-                }
+                // Web Share API not available - try fallback
+                await this.fallbackShare(dataURL, fileName);
                 
-            }, 'image/png', 0.95); // Added quality parameter for better image output
+            } catch (error) {
+                console.error('All sharing methods failed:', error);
+                alert('Failed to share drawing. Please try again.');
+            }
             
         } catch (error) {
             console.error('Export failed:', error);
             alert('Failed to prepare drawing for sharing. Please try again.');
+        }
+    }
+
+    // Fallback sharing method for when native sharing fails or isn't available
+    async fallbackShare(dataURL, fileName) {
+        try {
+            // Create a temporary download link for fallback sharing
+            const link = document.createElement('a');
+            link.href = dataURL;
+            link.download = fileName;
+            
+            // For iOS Safari, try to trigger native sharing through different methods
+            if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
+                // Method 1: Try to open in new tab (iOS will show share options)
+                const newWindow = window.open(dataURL, '_blank');
+                if (newWindow) {
+                    // Add message about how to share
+                    setTimeout(() => {
+                        if (newWindow && !newWindow.closed) {
+                            newWindow.close();
+                        }
+                        alert('Your drawing opened in a new tab. Use the browser\'s share button to share it!');
+                    }, 1000);
+                    return;
+                }
+                
+                // Method 2: Try to create object URL and share
+                try {
+                    const response = await fetch(dataURL);
+                    const blob = await response.blob();
+                    const objectURL = URL.createObjectURL(blob);
+                    
+                    // Open the object URL which might trigger share options
+                    const imageWindow = window.open(objectURL, '_blank');
+                    if (imageWindow) {
+                        setTimeout(() => {
+                            URL.revokeObjectURL(objectURL);
+                            if (imageWindow && !imageWindow.closed) {
+                                imageWindow.close();
+                            }
+                        }, 5000);
+                        alert('Your drawing opened in a new tab. Use your device\'s share button to share it!');
+                        return;
+                    }
+                } catch (objectURLError) {
+                    console.log('Object URL method failed:', objectURLError);
+                }
+            }
+            
+            // Method 3: Download fallback for all platforms
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            alert('Your drawing has been downloaded! You can now share it from your Downloads folder.');
+            
+        } catch (fallbackError) {
+            console.error('Fallback sharing failed:', fallbackError);
+            alert('Unable to share or download the drawing. Please try again.');
         }
     }
 
