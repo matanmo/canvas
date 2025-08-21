@@ -139,6 +139,7 @@ class DrawingApp {
         
         // Clear confirmation state
         this.clearConfirmMode = false;
+        this.clearClickInProgress = false;
         
         // Splash screen state
         this.drawingEnabled = false; // Start with drawing disabled
@@ -862,6 +863,15 @@ class DrawingApp {
 
     // Handle clear button click - either enter confirm mode or actually clear
     handleClearClick() {
+        // Prevent double execution from multiple event handlers
+        if (this.clearClickInProgress) return;
+        this.clearClickInProgress = true;
+        
+        // Use setTimeout to reset the flag after event handling is complete
+        setTimeout(() => {
+            this.clearClickInProgress = false;
+        }, 50);
+        
         if (!this.clearConfirmMode) {
             // First click - enter confirmation mode
             this.enterClearConfirmMode();
