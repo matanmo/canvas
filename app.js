@@ -127,6 +127,9 @@ class DrawingApp {
         this.history = [];
         this.historyIndex = -1;
         
+        // Clear confirmation state
+        this.clearConfirmMode = false;
+        
         // Initialize
         this.setupCanvas();
         this.setupEventListeners();
@@ -577,11 +580,109 @@ class DrawingApp {
         }
     }
 
+    // Handle clear button click - either enter confirm mode or actually clear
+    handleClearClick() {
+        if (!this.clearConfirmMode) {
+            // First click - enter confirmation mode
+            this.enterClearConfirmMode();
+        } else {
+            // Second click - actually clear the canvas
+            this.clear();
+        }
+    }
+    
+    // Enter clear confirmation mode
+    enterClearConfirmMode() {
+        this.clearConfirmMode = true;
+        const clearBtn = document.getElementById('clearBtn');
+        clearBtn.classList.add('confirm-mode');
+        
+        // Add body class for visual styling
+        document.body.classList.add('clear-confirm-mode');
+        
+        // Disable all other buttons
+        this.disableOtherButtons();
+        
+        // Add outside click listener to exit confirm mode
+        this.addOutsideClickListener();
+    }
+    
+    // Exit clear confirmation mode
+    exitClearConfirmMode() {
+        this.clearConfirmMode = false;
+        const clearBtn = document.getElementById('clearBtn');
+        clearBtn.classList.remove('confirm-mode');
+        
+        // Remove body class
+        document.body.classList.remove('clear-confirm-mode');
+        
+        // Re-enable other buttons (with proper state)
+        this.updateUI();
+        
+        // Remove outside click listener
+        this.removeOutsideClickListener();
+    }
+
     clear() {
         if (this.strokes.length > 0) {
-            this.addToHistory({ type: 'CLEAR', previousStrokes: [...this.strokes] });
+            // Clear everything - strokes, history, and reset view
             this.strokes = [];
+            
+            // Reset history completely (clean slate)
+            this.history = [];
+            this.historyIndex = -1;
+            
+            // Reset zoom and pan to baseline
+            this.scale = 1;
+            this.panX = 0;
+            this.panY = 0;
+            
             this.isDirty = true;
+            this.updateUI(); // Update button states after clearing
+        }
+        
+        // Exit confirm mode after clearing
+        this.exitClearConfirmMode();
+    }
+    
+    // Disable other buttons when in confirm mode
+    disableOtherButtons() {
+        document.getElementById('undoBtn').disabled = true;
+        document.getElementById('redoBtn').disabled = true;
+        document.getElementById('shareBtn').disabled = true;
+    }
+    
+    // Outside click listener management
+    addOutsideClickListener() {
+        // Bind the method so we can remove it later
+        this.outsideClickHandler = this.handleOutsideClick.bind(this);
+        // Use capture phase to ensure we catch all clicks before other handlers
+        document.addEventListener('click', this.outsideClickHandler, true);
+        document.addEventListener('touchend', this.outsideClickHandler, true);
+        // Also listen on the canvas specifically for better coverage
+        this.canvas.addEventListener('click', this.outsideClickHandler, true);
+        this.canvas.addEventListener('touchend', this.outsideClickHandler, true);
+    }
+    
+    removeOutsideClickListener() {
+        if (this.outsideClickHandler) {
+            document.removeEventListener('click', this.outsideClickHandler, true);
+            document.removeEventListener('touchend', this.outsideClickHandler, true);
+            this.canvas.removeEventListener('click', this.outsideClickHandler, true);
+            this.canvas.removeEventListener('touchend', this.outsideClickHandler, true);
+            this.outsideClickHandler = null;
+        }
+    }
+    
+    handleOutsideClick(event) {
+        const clearBtn = document.getElementById('clearBtn');
+        
+        // Check if the click was outside the clear button
+        if (!clearBtn.contains(event.target)) {
+            // Prevent the event from bubbling to avoid triggering other button actions
+            event.preventDefault();
+            event.stopPropagation();
+            this.exitClearConfirmMode();
         }
     }
 
@@ -732,7 +833,7 @@ class DrawingApp {
         
         addButtonHandler('undoBtn', () => this.undo());
         addButtonHandler('redoBtn', () => this.redo());
-        addButtonHandler('clearBtn', () => this.clear());
+        addButtonHandler('clearBtn', () => this.handleClearClick());
         addButtonHandler('shareBtn', () => this.share());
         
         this.updateUI();

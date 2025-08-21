@@ -201,4 +201,27 @@ html, body {
     transition: all 0.4s ease;
 }
 
+/* Clear button confirmation mode - red background with white icon */
+.toolbar-btn.confirm-mode {
+    background-color: #FF3B30; /* iOS red color */
+    color: white;
+    transition: all 0.3s ease;
+    padding: 0 48px;
+}
+
+/* Clear button active state when in confirm mode */
+#clearBtn.confirm-mode:not(:disabled):active {
+    background-color: #D70015; /* Darker red for active state */
+    padding: 0 56px;
+    transition: all 0.25s ease;
+    border-radius: 100px;
+}
+
+/* When clear is in confirm mode, other buttons appear more disabled */
+body.clear-confirm-mode .toolbar-btn:not(#clearBtn):disabled {
+    background-color: var(--surface-disabled);
+    color: rgba(0, 0, 0, 0.1); /* Extra faded */
+    transition: all 0.3s ease;
+}
+
 
