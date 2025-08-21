@@ -5,83 +5,17 @@
 let CACHE_VERSION = null;
 let CACHE_NAME = null;
 
-// Get the current version from the server
-async function getCurrentVersion() {
-    try {
-        // Try static version file first (for GitHub Pages and static hosting)
-        try {
-            const response = await fetch('./version.json');
-            if (response.ok) {
-                const data = await response.json();
-                console.log('Version fetched from version.json:', data.version);
-                return data.version;
-            }
-        } catch (err) {
-            console.log('No version.json found, trying server endpoints');
-        }
-        
-        // Try server endpoints (for local/custom server)
-        const endpoints = [
-            '/api/version',           // For local/custom server
-            './api/version',          // Relative path
-        ];
-        
-        for (const endpoint of endpoints) {
-            try {
-                const response = await fetch(endpoint);
-                if (response.ok) {
-                    const data = await response.json();
-                    console.log(`Version fetched from ${endpoint}:`, data.version);
-                    return data.version;
-                }
-            } catch (err) {
-                console.log(`Failed to fetch from ${endpoint}:`, err.message);
-            }
-        }
-        
-        // If all endpoints fail, use file-based versioning
-        console.log('All version endpoints failed, using file-based versioning');
-        return await getFileBasedVersion();
-        
-    } catch (error) {
-        // Ultimate fallback to timestamp
-        console.log('Using timestamp fallback versioning');
-        return `v${Date.now()}`;
-    }
+// Simple version that works everywhere
+function getCurrentVersion() {
+    // Use a simple timestamp-based version that changes when SW is updated
+    // This ensures existing installations keep working
+    return 'v1703520000'; // Updated version with sharing fix
 }
 
-// File-based version detection as backup
-async function getFileBasedVersion() {
-    try {
-        // Fetch main files and use their headers/content to determine version
-        const files = ['app.js', 'style.css', 'index.html'];
-        let latestTime = 0;
-        
-        for (const file of files) {
-            try {
-                const response = await fetch(file, { method: 'HEAD' });
-                if (response.ok) {
-                    const lastModified = response.headers.get('last-modified');
-                    if (lastModified) {
-                        const time = new Date(lastModified).getTime();
-                        latestTime = Math.max(latestTime, time);
-                    }
-                }
-            } catch (err) {
-                // File might not exist or network error
-            }
-        }
-        
-        return latestTime > 0 ? `v${Math.floor(latestTime / 1000)}` : `v${Date.now()}`;
-    } catch (error) {
-        return `v${Date.now()}`;
-    }
-}
-
-// Initialize cache version
-async function initializeCacheVersion() {
+// Initialize cache version - simple and reliable
+function initializeCacheVersion() {
     if (!CACHE_VERSION) {
-        CACHE_VERSION = await getCurrentVersion();
+        CACHE_VERSION = getCurrentVersion();
         CACHE_NAME = `canvas-app-${CACHE_VERSION}`;
         console.log('📱 Service Worker: Using version', CACHE_VERSION);
     }
@@ -95,65 +29,65 @@ const STATIC_ASSETS = [
     './app.js',
     './style.css',
     './favicon.png',
-    './manifest.json',
-    './version.json'
+    './manifest.json'
 ];
 
 // Install event - cache assets when service worker is first installed
 self.addEventListener('install', (event) => {
+    const version = initializeCacheVersion();
+    console.log('🔧 Service Worker: Installing version', version);
+    
     event.waitUntil(
-        initializeCacheVersion().then((version) => {
-            console.log('🔧 Service Worker: Installing version', version);
-            
-            return caches.open(CACHE_NAME)
-                .then((cache) => {
-                    console.log('📦 Service Worker: Caching assets');
-                    return cache.addAll(STATIC_ASSETS);
-                })
-                .then(() => {
-                    console.log('✅ Service Worker: Assets cached successfully');
-                    // Force activation of new service worker
-                    return self.skipWaiting();
-                })
-                .catch((error) => {
-                    console.error('❌ Service Worker: Failed to cache assets:', error);
-                });
-        })
+        caches.open(CACHE_NAME)
+            .then((cache) => {
+                console.log('📦 Service Worker: Caching assets');
+                return cache.addAll(STATIC_ASSETS);
+            })
+            .then(() => {
+                console.log('✅ Service Worker: Assets cached successfully');
+                // Force activation of new service worker
+                return self.skipWaiting();
+            })
+            .catch((error) => {
+                console.error('❌ Service Worker: Failed to cache assets:', error);
+                // Don't fail completely - try to continue
+            })
     );
 });
 
 // Activate event - clean up old caches and take control
 self.addEventListener('activate', (event) => {
+    const version = initializeCacheVersion();
+    console.log('🚀 Service Worker: Activating version', version);
+    
     event.waitUntil(
-        initializeCacheVersion().then((version) => {
-            console.log('🚀 Service Worker: Activating version', version);
-            
-            return Promise.all([
-                // Clean up old caches
-                caches.keys().then((cacheNames) => {
-                    return Promise.all(
-                        cacheNames.map((cacheName) => {
-                            if (cacheName.startsWith('canvas-app-') && cacheName !== CACHE_NAME) {
-                                console.log('🗑️ Service Worker: Deleting old cache:', cacheName);
-                                return caches.delete(cacheName);
-                            }
-                        })
-                    );
-                }),
-                // Take control of all pages immediately
-                self.clients.claim()
-            ]).then(() => {
-                console.log('✅ Service Worker: Activated and ready');
-                // Notify all clients about the update
-                return self.clients.matchAll();
-            }).then((clients) => {
-                clients.forEach((client) => {
-                    client.postMessage({
-                        type: 'SW_UPDATED',
-                        version: CACHE_VERSION
-                    });
+        Promise.all([
+            // Clean up old caches
+            caches.keys().then((cacheNames) => {
+                return Promise.all(
+                    cacheNames.map((cacheName) => {
+                        if (cacheName.startsWith('canvas-app-') && cacheName !== CACHE_NAME) {
+                            console.log('🗑️ Service Worker: Deleting old cache:', cacheName);
+                            return caches.delete(cacheName);
+                        }
+                    })
+                );
+            }),
+            // Take control of all pages immediately
+            self.clients.claim()
+        ]).then(() => {
+            console.log('✅ Service Worker: Activated and ready');
+            // Notify all clients about the update
+            return self.clients.matchAll();
+        }).then((clients) => {
+            clients.forEach((client) => {
+                client.postMessage({
+                    type: 'SW_UPDATED',
+                    version: CACHE_VERSION
                 });
             });
+        }).catch((error) => {
+            console.log('Service Worker: Activation completed with some errors:', error);
         })
     );
 });
@@ -169,11 +103,6 @@ self.addEventListener('fetch', (event) => {
     if (!event.request.url.startsWith(self.location.origin)) {
         return;
     }
-    
-    // Skip API requests that might not exist on all hosting platforms
-    if (event.request.url.includes('/api/')) {
-        return;
-    }
 
     // Skip external resources (fonts, etc.)
     if (event.request.url.includes('googleapis.com') || 
@@ -182,64 +111,51 @@ self.addEventListener('fetch', (event) => {
     }
 
     event.respondWith(
-        initializeCacheVersion().then(() => {
-            return caches.match(event.request);
-        }).then((cachedResponse) => {
+        caches.match(event.request).then((cachedResponse) => {
             // If we have a cached version, serve it immediately
             if (cachedResponse) {
-                // In the background, fetch fresh version for next time (but don't wait for it)
-                fetchAndCache(event.request).catch(() => {
-                    // Silently fail background updates
+                // In the background, try to fetch fresh version for next time
+                fetch(event.request).then((response) => {
+                    if (response.status === 200) {
+                        initializeCacheVersion();
+                        caches.open(CACHE_NAME).then((cache) => {
+                            cache.put(event.request, response.clone());
+                        });
+                    }
+                }).catch(() => {
+                    // Network error - just use cached version
                 });
+                
                 return cachedResponse;
             }
             
-            // If not cached, fetch from network
-            return fetchAndCache(event.request);
+            // If not cached, try to fetch from network
+            return fetch(event.request).then((response) => {
+                if (response.status === 200) {
+                    // Cache successful responses
+                    initializeCacheVersion();
+                    const responseClone = response.clone();
+                    caches.open(CACHE_NAME).then((cache) => {
+                        cache.put(event.request, responseClone);
+                    });
+                }
+                return response;
+            });
         }).catch((error) => {
             console.error('Service Worker: Fetch failed:', error);
             
             // Try to serve cached index.html for navigation requests
             if (event.request.mode === 'navigate') {
                 return caches.match('./index.html').then((indexResponse) => {
-                    if (indexResponse) {
-                        return indexResponse;
-                    }
-                    return new Response('App is offline. Please check your connection.', {
-                        status: 503,
-                        statusText: 'Service Unavailable',
-                        headers: { 'Content-Type': 'text/html' }
-                    });
+                    return indexResponse || caches.match('./');
                 });
             }
             
-            return new Response('Resource not available offline.', {
-                status: 503,
-                statusText: 'Service Unavailable'
-            });
+            // For other requests, just fail gracefully
+            throw error;
         })
     );
 });
-
-// Helper function to fetch and cache resources
-async function fetchAndCache(request) {
-    try {
-        await initializeCacheVersion(); // Ensure cache name is set
-        const response = await fetch(request);
-        
-        // Only cache successful responses
-        if (response.status === 200) {
-            const cache = await caches.open(CACHE_NAME);
-            // Clone the response as it can only be consumed once
-            cache.put(request, response.clone());
-        }
-        
-        return response;
-    } catch (error) {
-        console.error('Service Worker: Network fetch failed:', error);
-        throw error;
-    }
-}
 
 // Listen for messages from the main app
 self.addEventListener('message', (event) => {
@@ -249,9 +165,4 @@ self.addEventListener('message', (event) => {
     }
 });
 
-// Background sync for future enhancements (optional)
-self.addEventListener('sync', (event) => {
-    console.log('Service Worker: Background sync triggered:', event.tag);
-});
-
-console.log('📱 Service Worker: Loaded with dynamic versioning');
+console.log('📱 Service Worker: Loaded and ready');
