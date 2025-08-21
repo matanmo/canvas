@@ -747,13 +747,25 @@ class DrawingApp {
                         
                     } catch (shareError) {
                         console.log('Native share failed:', shareError.message);
+                        
+                        // Check if user canceled (AbortError) vs actual sharing error
+                        if (shareError.name === 'AbortError') {
+                            // User canceled - do nothing, no error message needed
+                            return;
+                        }
+                        
+                        // Actual sharing error - show message
                         alert('Sharing failed. This feature requires HTTPS to work properly.');
                         return;
                     }
                 }
                 
-                // Web Share API not available
-                alert('Native sharing requires HTTPS. Deploy your app to test the share feature properly.');
+                // Web Share API not available - only show message in development
+                if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
+                    console.log('Web Share API not available on localhost. Deploy with HTTPS to test sharing.');
+                } else {
+                    console.log('Web Share API not supported in this browser/environment.');
+                }
                 
             }, 'image/png');
             
