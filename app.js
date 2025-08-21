@@ -1006,7 +1006,7 @@ class DrawingApp {
         }
     }
 
-    // Share functionality - prioritizes native OS share sheet
+    // Share functionality - prioritizes native OS share sheet with size optimization
     async share() {
         if (this.strokes.length === 0) {
             alert('No drawing to share! Draw something first.');
@@ -1017,19 +1017,67 @@ class DrawingApp {
             // Create the image first
             const bounds = this.calculateBounds();
             const padding = 32;
-            const dpr = window.devicePixelRatio || 1;
+            
+            // Calculate desired dimensions
+            let width = bounds.maxX - bounds.minX + padding * 2;
+            let height = bounds.maxY - bounds.minY + padding * 2;
+            
+            // Set maximum export dimensions to prevent memory issues
+            // Maximum area of 4 megapixels (2048x2048) which is reasonable for sharing
+            const MAX_DIMENSION = 2048;
+            const MAX_AREA = MAX_DIMENSION * MAX_DIMENSION;
+            
+            // Calculate scale factor to fit within limits
+            let scaleFactor = 1;
+            const currentArea = width * height;
+            
+            if (currentArea > MAX_AREA) {
+                scaleFactor = Math.sqrt(MAX_AREA / currentArea);
+            }
+            
+            // Also ensure no single dimension exceeds the maximum
+            if (width > MAX_DIMENSION) {
+                scaleFactor = Math.min(scaleFactor, MAX_DIMENSION / width);
+            }
+            if (height > MAX_DIMENSION) {
+                scaleFactor = Math.min(scaleFactor, MAX_DIMENSION / height);
+            }
+            
+            // Apply scale factor
+            width *= scaleFactor;
+            height *= scaleFactor;
+            
+            // For very large images, use lower DPR to save memory
+            let dpr = window.devicePixelRatio || 1;
+            if (scaleFactor < 0.5) {
+                // For heavily scaled down images, use lower DPR
+                dpr = Math.max(1, dpr * 0.5);
+            }
             
             // Create offscreen canvas for export
             const offscreenCanvas = document.createElement('canvas');
             const offscreenCtx = offscreenCanvas.getContext('2d');
             
-            const width = bounds.maxX - bounds.minX + padding * 2;
-            const height = bounds.maxY - bounds.minY + padding * 2;
+            // Check if context was created successfully
+            if (!offscreenCtx) {
+                throw new Error('Failed to create canvas context');
+            }
             
-            // Scale for high-DPI export
-            offscreenCanvas.width = width * dpr;
-            offscreenCanvas.height = height * dpr;
-            offscreenCtx.scale(dpr, dpr);
+            // Set canvas size with memory-optimized DPR
+            try {
+                offscreenCanvas.width = width * dpr;
+                offscreenCanvas.height = height * dpr;
+                
+                // Check if canvas dimensions were set successfully (memory check)
+                if (offscreenCanvas.width === 0 || offscreenCanvas.height === 0) {
+                    throw new Error('Canvas size too large for device memory');
+                }
+                
+                offscreenCtx.scale(dpr, dpr);
+            } catch (memoryError) {
+                console.error('Canvas memory error:', memoryError);
+                throw new Error('Drawing too large to export. Try zooming in and sharing a smaller portion.');
+            }
             
             // White background
             offscreenCtx.fillStyle = 'white';
@@ -1037,20 +1085,29 @@ class DrawingApp {
             
             // Set up drawing style
             offscreenCtx.strokeStyle = '#000000';
-            offscreenCtx.lineWidth = this.baseLineWidth;
+            offscreenCtx.lineWidth = this.baseLineWidth * scaleFactor;
             offscreenCtx.lineCap = 'round';
             offscreenCtx.lineJoin = 'round';
             
-            // Translate to account for bounds and padding
-            offscreenCtx.translate(-bounds.minX + padding, -bounds.minY + padding);
+            // Apply scaling and translation to fit the drawing in the export canvas
+            offscreenCtx.save();
+            offscreenCtx.scale(scaleFactor, scaleFactor);
+            offscreenCtx.translate(-bounds.minX + padding / scaleFactor, -bounds.minY + padding / scaleFactor);
             
             // Render all strokes
             for (const stroke of this.strokes) {
                 this.renderStrokeToContext(offscreenCtx, stroke);
             }
             
+            offscreenCtx.restore();
+            
             // Convert to blob and share using native OS share sheet
             offscreenCanvas.toBlob(async (blob) => {
+                if (!blob) {
+                    console.error('Failed to create image blob');
+                    alert('Failed to create image. The drawing might be too large. Try clearing part of it and sharing again.');
+                    return;
+                }
                 // Check if Web Share API is available
                 if (navigator.share) {
                     try {
