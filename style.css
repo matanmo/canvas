@@ -281,7 +281,7 @@ body.standalone-mode .toolbar {
     bottom: 0;
     display: flex;
     justify-content: center;
-    align-items: top;
+    align-items: flex-start;
     z-index: 1000; /* Above canvas but below toolbar */
     padding: 32px;
     opacity: 1;
