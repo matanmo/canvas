@@ -27,7 +27,7 @@ html, body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     font-size: 16px;
     font-weight: 500;
-    line-height: 25px;
+    line-height: 24px;
     background-color: var(--background);
     /* Disable overscroll effects */
     overscroll-behavior: none;
@@ -47,6 +47,10 @@ html, body {
     -moz-transform: scale(1);
     -webkit-transform: scale(1);
     transform: scale(1);
+}
+
+b {
+    font-weight: 600;
 }
 
 /* Fullscreen canvas */
@@ -185,6 +189,7 @@ html, body {
 
 
 .toolbar-btn:not(:disabled):active, .toolbar-btn:first-child:not(:disabled):active, .toolbar-btn:last-child:not(:disabled):active{
+                                                        
     background-color: var(--surface-active);
     padding: 0 20px;
     transition: all 0.25s ease;
@@ -399,5 +404,3 @@ body.standalone-mode .toolbar {
         margin-bottom: 32px;
     }
 }
-
-
