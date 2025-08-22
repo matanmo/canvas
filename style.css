@@ -346,6 +346,7 @@ body.standalone-mode .toolbar {
 .got-it-btn {
     background-color: var(--brand);
     color: white;
+    border: none; /* Remove default browser border */
     border-radius: 100px;
     font-size: 16px;
     font-weight: 600;
