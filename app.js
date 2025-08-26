@@ -133,6 +133,9 @@ class DrawingApp {
         // Drawing settings
         this.baseLineWidth = 5;
         
+        // Tool state
+        this.currentTool = 'brush'; // 'brush' or 'eraser'
+        
         // History system
         this.history = [];
         this.historyIndex = -1;
@@ -738,7 +741,8 @@ class DrawingApp {
         const worldPos = this.screenToWorld(this.brushPos);
         this.currentStroke = {
             points: [worldPos],
-            timestamp: Date.now()
+            timestamp: Date.now(),
+            tool: this.currentTool // Store which tool was used
         };
     }
 
@@ -873,6 +877,17 @@ class DrawingApp {
         const points = stroke.points;
         if (points.length < 2) return;
         
+        // Set drawing context based on tool
+        if (stroke.tool === 'eraser') {
+            // Eraser mode: use destination-out to clear canvas
+            this.ctx.globalCompositeOperation = 'destination-out';
+            this.ctx.lineWidth = this.baseLineWidth * 4; // 4x thickness for eraser
+        } else {
+            // Brush mode: normal drawing
+            this.ctx.globalCompositeOperation = 'source-over';
+            this.ctx.lineWidth = this.baseLineWidth;
+        }
+        
         this.ctx.beginPath();
         this.ctx.moveTo(points[0].x, points[0].y);
         
@@ -898,6 +913,9 @@ class DrawingApp {
         }
         
         this.ctx.stroke();
+        
+        // Reset composite operation to default
+        this.ctx.globalCompositeOperation = 'source-over';
     }
 
     // History system
@@ -1282,6 +1300,17 @@ class DrawingApp {
         const points = stroke.points;
         if (points.length < 2) return;
         
+        // Set drawing context based on tool
+        if (stroke.tool === 'eraser') {
+            // Eraser mode: use destination-out to clear canvas
+            ctx.globalCompositeOperation = 'destination-out';
+            ctx.lineWidth = this.baseLineWidth * 4; // 4x thickness for eraser
+        } else {
+            // Brush mode: normal drawing
+            ctx.globalCompositeOperation = 'source-over';
+            ctx.lineWidth = this.baseLineWidth;
+        }
+        
         ctx.beginPath();
         ctx.moveTo(points[0].x, points[0].y);
         
@@ -1304,6 +1333,9 @@ class DrawingApp {
         }
         
         ctx.stroke();
+        
+        // Reset composite operation to default
+        ctx.globalCompositeOperation = 'source-over';
     }
 
     // UI setup and updates
@@ -1363,6 +1395,9 @@ class DrawingApp {
         addButtonHandler('clearBtn', () => this.handleClearClick());
         addButtonHandler('shareBtn', () => this.share());
         
+        // Setup tool selector
+        this.setupToolSelector();
+        
         this.updateUI();
     }
 
@@ -1374,6 +1409,151 @@ class DrawingApp {
         document.getElementById('redoBtn').disabled = this.historyIndex >= this.history.length - 1 || splashVisible;
         document.getElementById('clearBtn').disabled = this.strokes.length === 0 || splashVisible;
         document.getElementById('shareBtn').disabled = this.strokes.length === 0 || splashVisible;
+        
+        // Update tool selector state
+        this.updateToolSelector();
+    }
+    
+    // Setup tool selector toggle
+    setupToolSelector() {
+        const brushBtn = document.getElementById('brushBtn');
+        const eraserBtn = document.getElementById('eraserBtn');
+        const toolToggle = document.querySelector('.tool-toggle');
+        
+        // Make entire toggle area clickable to switch tools
+        toolToggle.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            // If eraser is disabled, only allow switching to brush
+            const hasStrokes = this.strokes.length > 0;
+            if (!hasStrokes) {
+                // If trying to switch to eraser while disabled, show shake animation
+                if (this.currentTool === 'brush') {
+                    this.triggerShakeAnimation();
+                }
+                this.setTool('brush');
+                return;
+            }
+            
+            // Toggle between brush and eraser
+            const newTool = this.currentTool === 'brush' ? 'eraser' : 'brush';
+            this.setTool(newTool);
+        });
+        
+        toolToggle.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            // If eraser is disabled, only allow switching to brush
+            const hasStrokes = this.strokes.length > 0;
+            if (!hasStrokes) {
+                // If trying to switch to eraser while disabled, show shake animation
+                if (this.currentTool === 'brush') {
+                    this.triggerShakeAnimation();
+                }
+                this.setTool('brush');
+                return;
+            }
+            
+            // Toggle between brush and eraser
+            const newTool = this.currentTool === 'brush' ? 'eraser' : 'brush';
+            this.setTool(newTool);
+        });
+        
+        // Add active state handling for the entire toggle
+        toolToggle.addEventListener('touchstart', () => {
+            // Only show active state if eraser is not disabled
+            if (this.strokes.length > 0) {
+                toolToggle.classList.add('active-state');
+            }
+        });
+        
+        toolToggle.addEventListener('touchend', () => {
+            // Always clear background color on touch end
+            toolToggle.classList.remove('active-state');
+        });
+        
+        toolToggle.addEventListener('touchcancel', () => {
+            // Always clear background color on touch cancel
+            toolToggle.classList.remove('active-state');
+        });
+        
+        toolToggle.addEventListener('mousedown', () => {
+            // Only show active state if eraser is not disabled
+            if (this.strokes.length > 0) {
+                toolToggle.classList.add('active-state');
+            }
+        });
+        
+        toolToggle.addEventListener('mouseup', () => {
+            // Always clear background color on mouse up
+            toolToggle.classList.remove('active-state');
+        });
+        
+        toolToggle.addEventListener('mouseleave', () => {
+            // Always clear background color on mouse leave
+            toolToggle.classList.remove('active-state');
+        });
+    }
+    
+    // Set the current tool
+    setTool(tool) {
+        if (tool === this.currentTool) return;
+        
+        this.currentTool = tool;
+        
+        // Update UI
+        this.updateToolSelector();
+        
+        // Update cursor
+        this.canvas.style.cursor = tool === 'eraser' ? 'crosshair' : 'crosshair';
+        
+        console.log('Tool changed to:', tool);
+    }
+    
+    // Update tool selector UI state
+    updateToolSelector() {
+        const brushBtn = document.getElementById('brushBtn');
+        const eraserBtn = document.getElementById('eraserBtn');
+        const toolToggle = document.querySelector('.tool-toggle');
+        
+        // Update button states - only show active if tool is selected AND eraser is not disabled
+        const hasStrokes = this.strokes.length > 0;
+        brushBtn.classList.toggle('active', this.currentTool === 'brush');
+        eraserBtn.classList.toggle('active', this.currentTool === 'eraser' && hasStrokes);
+        
+        // Update toggle handle position
+        toolToggle.classList.toggle('eraser-active', this.currentTool === 'eraser');
+        
+        // Disable eraser if no strokes exist
+        eraserBtn.disabled = !hasStrokes;
+        
+        // Add/remove eraser-disabled class to toggle for CSS styling
+        toolToggle.classList.toggle('eraser-disabled', !hasStrokes);
+        
+        // Clear any stuck background color when eraser becomes disabled
+        if (!hasStrokes) {
+            toolToggle.style.backgroundColor = '';
+        }
+        
+        // Auto-select brush if eraser is disabled and eraser was selected
+        if (!hasStrokes && this.currentTool === 'eraser') {
+            this.setTool('brush');
+        }
+    }
+    
+    // Trigger shake animation when eraser tool is disabled
+    triggerShakeAnimation() {
+        const toolToggle = document.querySelector('.tool-toggle');
+        
+        // Add shake class
+        toolToggle.classList.add('shake');
+        
+        // Remove shake class after animation completes
+        setTimeout(() => {
+            toolToggle.classList.remove('shake');
+        }, 300); // Match the CSS animation duration
     }
 }
 

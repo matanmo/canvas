@@ -9,6 +9,7 @@
     --surface-disabled: rgba(0, 0, 0, 0.02);
     --brand: #007AFF;
     --brand-active: #0053AD;
+    --remove: #FF2D55;
 }
 
 /* Reset and base styles */
@@ -87,6 +88,144 @@ b {
     -webkit-appearance: none;
     appearance: none;
     outline: none;
+}
+
+/* Tool selector toggle - positioned at top center */
+.tool-selector {
+    position: fixed;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1002; /* Above splash screen and toolbar */
+    padding: 16px;
+    /* Safe area for devices with notch */
+    padding-top: max(32px, env(safe-area-inset-top));
+}
+
+.tool-toggle {
+    position: relative;
+    display: flex;
+    background-color: var(--surface);
+    border-radius: 24px;
+    padding: 4px;
+    height: 48px;
+    overflow: hidden;
+    /* Add transition for background color changes */
+    transition: background-color 0.25s ease-in-out;
+    /* Prevent zoom on toggle */
+    touch-action: none;
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    cursor: pointer;
+}
+
+/* Shake animation for when eraser tool is disabled */
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-4px); }
+    75% { transform: translateX(4px); }
+}
+
+.tool-toggle.shake {
+    animation: shake 0.3s ease-in-out;
+}
+
+.tool-option {
+    position: relative;
+    z-index: 2;
+    padding: 8px 12px;
+    border: none;
+    background: transparent;
+    color: var(--primary);
+    font-size: 14px;
+    font-weight: 500;
+    border-radius: 20px;
+    transition: color 0.3s ease;
+    /* Prevent zoom on buttons */
+    touch-action: none;
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-appearance: none;
+    appearance: none;
+    outline: none;
+}
+
+.tool-option.active {
+    color: var(--primary);
+}
+
+.tool-option:disabled {
+    color: var(--disabled);
+    cursor: not-allowed;
+}
+
+.toggle-handle {
+    position: absolute;
+    top: 4px;
+    left: 4px;
+    width: calc(50% - 4px);
+    height: calc(100% - 8px);
+    background-color: var(--background);
+    border-radius: 20px;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 4px 0 rgba(0, 0, 0, 0.08);
+    z-index: 1;
+}
+
+/* Move handle to eraser position when eraser is active */
+.tool-toggle.eraser-active .toggle-handle {
+    transform: translateX(100%);
+    border-radius: 12px 20px 20px 12px;
+}
+
+/* Handle border radius when brush tool is selected (default state) */
+.tool-toggle:not(.eraser-active) .toggle-handle {
+    border-radius: 20px 12px 12px 20px;
+}
+
+/* Disabled state for eraser when no strokes exist */
+.tool-toggle.eraser-disabled .tool-option[data-tool="eraser"] {
+    color: var(--disabled);
+    cursor: not-allowed;
+}
+
+.tool-toggle.eraser-disabled .tool-option[data-tool="eraser"]:hover {
+    color: var(--disabled);
+}
+
+/* Ensure disabled eraser never shows active state */
+.tool-toggle.eraser-disabled .tool-option[data-tool="eraser"].active {
+    color: var(--disabled);
+}
+
+/* Active state for entire toggle - handled by JavaScript */
+.tool-toggle.active-state {
+    /*background-color: var(--surface-active);*/
+}
+
+.tool-toggle.active-state .toggle-handle {
+    border-radius: 20px;
+    width: 56px;
+    box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.16);
+}
+
+/* When eraser is active AND toggle is touched, position handle to expand left */
+.tool-toggle.eraser-active.active-state .toggle-handle {
+    transform: translateX(calc(100% - 16px));
+}
+
+.tool-toggle.eraser-active {
+    background-color: var(--remove);
+}
+
+.tool-toggle.eraser-active .tool-option[data-tool="eraser"] {
+    color: var(--remove);
+}
+
+.tool-toggle.eraser-active .tool-option[data-tool="brush"] {
+    color: var(--background);
 }
 
 /* Bottom toolbar */
@@ -227,7 +366,7 @@ b {
 
 /* Clear button confirmation mode - red background with white icon */
 .toolbar-btn.confirm-mode {
-    background-color: #FF3B30; /* iOS red color */
+    background-color: var(--remove); /* iOS red color */
     color: white;
     transition: all 0.3s ease;
     padding: 0 48px;
@@ -235,7 +374,7 @@ b {
 
 /* Clear button active state when in confirm mode */
 #clearBtn.confirm-mode:not(:disabled):active {
-    background-color: #D70015; /* Darker red for active state */
+    background-color: var(--remove); /* Darker red for active state */
     padding: 0 56px;
     transition: all 0.25s ease;
     border-radius: 100px;
@@ -284,11 +423,13 @@ body.standalone-mode .toolbar {
     left: 0;
     right: 0;
     bottom: 0;
+    width: 100vw;
+    height: 100vh;
     display: flex;
     justify-content: center;
     align-items: flex-start;
-    z-index: 1000; /* Above canvas but below toolbar */
-    padding: 32px;
+    z-index: 1003; /* Above everything including tool selector toggle */
+    background-color: var(--background); /* Solid white background */
     opacity: 1;
     transition: opacity 0.3s ease-out;
 }
@@ -302,8 +443,7 @@ body.standalone-mode .toolbar {
     text-align: left;
     max-width: 400px;
     width: 100%;
-    /* Move content up slightly to account for toolbar visibility */
-    margin-bottom: 120px;
+    padding: 32px;
     filter: blur(0);
     transition: filter 0.3s ease-out;
 }
