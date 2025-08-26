@@ -4,9 +4,9 @@
     --disabled: rgba(0, 0, 0, 0.25);
     --background: #FFFFFF;
     --background-secondary: rgba(255, 255, 255, 0.6);
-    --surface: rgba(0, 0, 0, 0.04);
-    --surface-active: rgba(0, 0, 0, 0.32);
-    --surface-disabled: rgba(0, 0, 0, 0.02);
+    --surface: rgba(0, 0, 0, 0.05);
+    --surface-active: rgba(0, 0, 0, 0.2);
+    --surface-disabled: rgba(0, 0, 0, 0.025);
     --brand: #007AFF;
     --brand-active: #0053AD;
     --remove: #FF2D55;
@@ -105,7 +105,8 @@ b {
 .tool-toggle {
     position: relative;
     display: flex;
-    background-color: var(--surface);
+    background-color: rgba(242, 242, 242, 0.75);
+    backdrop-filter: blur(40px);
     border-radius: 24px;
     padding: 4px;
     height: 48px;
@@ -200,11 +201,11 @@ b {
     color: var(--disabled);
 }
 
-/* Active state for entire toggle - handled by JavaScript */
+/* Active state for entire toggle - handled by JavaScript
 .tool-toggle.active-state {
-    /*background-color: var(--surface-active);*/
+    background-color: var(--surface-active);
 }
-
+*/
 .tool-toggle.active-state .toggle-handle {
     border-radius: 20px;
     width: 56px;
