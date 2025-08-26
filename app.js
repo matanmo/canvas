@@ -1441,9 +1441,73 @@ class DrawingApp {
             this.setTool(newTool);
         });
         
+        // Use a more robust approach for standalone mode compatibility
+        let touchStartTime = 0;
+        let touchStartPos = { x: 0, y: 0 };
+        let isLongPress = false;
+        let longPressTimer = null;
+        
+        toolToggle.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            const touch = e.touches[0];
+            touchStartTime = Date.now();
+            touchStartPos = { x: touch.clientX, y: touch.clientY };
+            isLongPress = false;
+            
+            // Only show active state if eraser is not disabled
+            if (this.strokes.length > 0) {
+                toolToggle.classList.add('active-state');
+            }
+            
+            // Set timer for long press detection (500ms)
+            longPressTimer = setTimeout(() => {
+                isLongPress = true;
+                // Provide haptic feedback for long press
+                if (navigator.vibrate) {
+                    navigator.vibrate(50);
+                }
+            }, 500);
+        });
+        
+        toolToggle.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            // Cancel long press if finger moves too much
+            if (e.touches[0]) {
+                const touch = e.touches[0];
+                const distance = Math.sqrt(
+                    Math.pow(touch.clientX - touchStartPos.x, 2) + 
+                    Math.pow(touch.clientY - touchStartPos.y, 2)
+                );
+                
+                if (distance > 10) { // 10px threshold
+                    if (longPressTimer) {
+                        clearTimeout(longPressTimer);
+                        longPressTimer = null;
+                    }
+                    isLongPress = false;
+                }
+            }
+        });
+        
         toolToggle.addEventListener('touchend', (e) => {
             e.preventDefault();
             e.stopPropagation();
+            
+            // Clear long press timer
+            if (longPressTimer) {
+                clearTimeout(longPressTimer);
+                longPressTimer = null;
+            }
+            
+            // Always clear background color on touch end
+            toolToggle.classList.remove('active-state');
+            
+            // Calculate touch duration
+            const touchDuration = Date.now() - touchStartTime;
             
             // If eraser is disabled, only allow switching to brush
             const hasStrokes = this.strokes.length > 0;
@@ -1456,25 +1520,21 @@ class DrawingApp {
                 return;
             }
             
-            // Toggle between brush and eraser
+            // Toggle between brush and eraser (works for both short and long taps)
             const newTool = this.currentTool === 'brush' ? 'eraser' : 'brush';
             this.setTool(newTool);
-        });
-        
-        // Add active state handling for the entire toggle
-        toolToggle.addEventListener('touchstart', () => {
-            // Only show active state if eraser is not disabled
-            if (this.strokes.length > 0) {
-                toolToggle.classList.add('active-state');
-            }
-        });
-        
-        toolToggle.addEventListener('touchend', () => {
-            // Always clear background color on touch end
-            toolToggle.classList.remove('active-state');
+            
+            // Log for debugging
+            console.log(`Tool switched to ${newTool} after ${touchDuration}ms touch (long press: ${isLongPress})`);
         });
         
         toolToggle.addEventListener('touchcancel', () => {
+            // Clear long press timer
+            if (longPressTimer) {
+                clearTimeout(longPressTimer);
+                longPressTimer = null;
+            }
+            
             // Always clear background color on touch cancel
             toolToggle.classList.remove('active-state');
         });

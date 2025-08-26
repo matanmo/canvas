@@ -123,8 +123,8 @@ b {
 /* Shake animation for when eraser tool is disabled */
 @keyframes shake {
     0%, 100% { transform: translateX(0); }
-    25% { transform: translateX(-4px); }
-    75% { transform: translateX(4px); }
+    25% { transform: translateX(-6px); }
+    75% { transform: translateX(6px); }
 }
 
 .tool-toggle.shake {
