@@ -1185,12 +1185,12 @@ class DrawingApp {
                 throw new Error('Drawing too large to export. Try zooming in and sharing a smaller portion.');
             }
             
-            // Background color based on current theme
-            offscreenCtx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--background').trim();
+            // Always use white background for export to ensure eraser strokes work properly
+            offscreenCtx.fillStyle = '#FFFFFF';
             offscreenCtx.fillRect(0, 0, width, height);
             
-            // Set up drawing style
-            offscreenCtx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--primary').trim();
+            // Set up drawing style - always use black for export to ensure visibility on white background
+            offscreenCtx.strokeStyle = '#000000';
             offscreenCtx.lineWidth = this.baseLineWidth * scaleFactor;
             offscreenCtx.lineCap = 'round';
             offscreenCtx.lineJoin = 'round';
