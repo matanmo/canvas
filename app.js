@@ -1303,7 +1303,7 @@ class DrawingApp {
         
         // Set drawing context based on tool
         if (stroke.tool === 'eraser') {
-            // For export: use white strokes on white background to make eraser invisible
+            // For export: use white brush strokes to cover black strokes underneath
             ctx.globalCompositeOperation = 'source-over';
             ctx.strokeStyle = '#FFFFFF';
             ctx.lineWidth = this.baseLineWidth * 4; // 4x thickness for eraser
