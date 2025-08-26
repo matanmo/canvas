@@ -148,12 +148,13 @@ class DrawingApp {
         this.drawingEnabled = false; // Start with drawing disabled
         this.splashScreen = document.getElementById('splashScreen');
         
-        // Initialize
-        this.setupSplashScreen();
-        this.setupCanvas();
-        this.setupEventListeners();
-        this.setupUI();
-        this.render();
+            // Initialize
+    this.setupSplashScreen();
+    this.setupCanvas();
+    this.setupEventListeners();
+    this.setupUI();
+    this.setupThemeObserver();
+    this.render();
     }
 
     // Splash screen management
@@ -852,7 +853,7 @@ class DrawingApp {
         this.ctx.scale(this.scale, this.scale);
         
         // Set drawing style
-        this.ctx.strokeStyle = '#000000';
+        this.ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--primary').trim();
         this.ctx.lineWidth = this.baseLineWidth; // Scale with zoom
         this.ctx.lineCap = 'round';
         this.ctx.lineJoin = 'round';
@@ -1184,12 +1185,12 @@ class DrawingApp {
                 throw new Error('Drawing too large to export. Try zooming in and sharing a smaller portion.');
             }
             
-            // White background
-            offscreenCtx.fillStyle = 'white';
+            // Background color based on current theme
+            offscreenCtx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--background').trim();
             offscreenCtx.fillRect(0, 0, width, height);
             
             // Set up drawing style
-            offscreenCtx.strokeStyle = '#000000';
+            offscreenCtx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--primary').trim();
             offscreenCtx.lineWidth = this.baseLineWidth * scaleFactor;
             offscreenCtx.lineCap = 'round';
             offscreenCtx.lineJoin = 'round';
@@ -1414,6 +1415,48 @@ class DrawingApp {
         this.updateToolSelector();
     }
     
+    // Setup theme observer to detect light/dark mode changes
+    setupThemeObserver() {
+        // Create a MediaQueryList to watch for theme changes
+        const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+        
+        // Function to handle theme changes
+        const handleThemeChange = () => {
+            // Force a redraw when theme changes so existing strokes update their colors
+            this.isDirty = true;
+            console.log('Theme changed, forcing redraw');
+        };
+        
+        // Listen for theme changes
+        mediaQuery.addEventListener('change', handleThemeChange);
+        
+        // Also listen for CSS custom property changes (for manual theme switching)
+        const observer = new MutationObserver((mutations) => {
+            mutations.forEach((mutation) => {
+                if (mutation.type === 'attributes' && mutation.attributeName === 'style') {
+                    // Check if CSS custom properties changed
+                    const oldValue = mutation.oldValue;
+                    const newValue = mutation.target.getAttribute('style');
+                    if (oldValue !== newValue) {
+                        this.isDirty = true;
+                        console.log('CSS properties changed, forcing redraw');
+                    }
+                }
+            });
+        });
+        
+        // Observe the document element for style changes
+        observer.observe(document.documentElement, {
+            attributes: true,
+            attributeOldValue: true,
+            attributeFilter: ['style']
+        });
+        
+        // Store references for cleanup if needed
+        this.themeObserver = observer;
+        this.themeMediaQuery = mediaQuery;
+    }
+
     // Setup tool selector toggle
     setupToolSelector() {
         const brushBtn = document.getElementById('brushBtn');

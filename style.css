@@ -3,15 +3,32 @@
     --primary: #1F1F21;
     --disabled: rgba(0, 0, 0, 0.25);
     --background: #FFFFFF;
-    --background-secondary: rgba(255, 255, 255, 0.6);
+    --background-secondary: rgba(242, 242, 242, 0.6);
+    --background-toolbar: rgba(255, 255, 255, 0.6);
     --surface: rgba(0, 0, 0, 0.05);
     --surface-active: rgba(0, 0, 0, 0.2);
     --surface-disabled: rgba(0, 0, 0, 0.025);
     --brand: #007AFF;
-    --brand-active: #0053AD;
+    --brand-active: #004999;
     --remove: #FF2D55;
+    --remove-active: #932139;
 }
-
+@media (prefers-color-scheme: dark) {
+    :root {
+        --primary: #FFFFFF;
+        --disabled: rgba(255, 255, 255, 0.25);
+        --background: #1F1F21;
+        --background-secondary: rgba(255, 255, 255, 0.1);
+        --background-toolbar: rgba(31, 31, 33, 0.6);
+        --surface: rgba(255, 255, 255, 0.05);
+        --surface-active: rgba(255, 255, 255, 0.2);
+        --surface-disabled: rgba(255, 255, 255, 0.025);
+        --brand: #148EFF;
+        --brand-active: #0C5599;
+        --remove: #FF4169;
+        --remove-active: #99273F;
+    }
+}
 /* Reset and base styles */
 * {
     margin: 0;
@@ -105,7 +122,7 @@ b {
 .tool-toggle {
     position: relative;
     display: flex;
-    background-color: rgba(242, 242, 242, 0.75);
+    background-color: var(--background-secondary);
     backdrop-filter: blur(40px);
     border-radius: 24px;
     padding: 4px;
@@ -240,7 +257,7 @@ b {
     padding: 16px;
     /* Safe area for devices with home indicator */
     padding-bottom: max(32px, env(safe-area-inset-bottom));
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.00) 0%, #FFF 81.73%);
+    background: var(--background-toolbar);
     backdrop-filter: blur(100px);
     /* Prevent iOS magnifying glass on toolbar */
     -webkit-user-select: none;
@@ -346,7 +363,7 @@ b {
 /* Share button call-to-action styling */
 #shareBtn {
     background-color: var(--brand);
-    color: white;
+    color: var(--background);
 }
 
 /* Share button active state - slightly lighter version of primary */
@@ -368,14 +385,14 @@ b {
 /* Clear button confirmation mode - red background with white icon */
 .toolbar-btn.confirm-mode {
     background-color: var(--remove); /* iOS red color */
-    color: white;
+    color: var(--background);
     transition: all 0.3s ease;
     padding: 0 48px;
 }
 
 /* Clear button active state when in confirm mode */
 #clearBtn.confirm-mode:not(:disabled):active {
-    background-color: var(--remove); /* Darker red for active state */
+    background-color: var(--remove-active); /* Darker red for active state */
     padding: 0 56px;
     transition: all 0.25s ease;
     border-radius: 100px;
@@ -491,7 +508,7 @@ body.standalone-mode .toolbar {
 
 .got-it-btn {
     background-color: var(--brand);
-    color: white;
+    color: var(--background);
     border: none; /* Remove default browser border */
     border-radius: 100px;
     font-size: 16px;
