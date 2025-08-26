@@ -1303,12 +1303,14 @@ class DrawingApp {
         
         // Set drawing context based on tool
         if (stroke.tool === 'eraser') {
-            // Eraser mode: use destination-out to clear canvas
-            ctx.globalCompositeOperation = 'destination-out';
+            // For export: use white strokes on white background to make eraser invisible
+            ctx.globalCompositeOperation = 'source-over';
+            ctx.strokeStyle = '#FFFFFF';
             ctx.lineWidth = this.baseLineWidth * 4; // 4x thickness for eraser
         } else {
             // Brush mode: normal drawing
             ctx.globalCompositeOperation = 'source-over';
+            ctx.strokeStyle = '#000000'; // Always black for export
             ctx.lineWidth = this.baseLineWidth;
         }
         
