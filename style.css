@@ -253,7 +253,7 @@ b {
     left: 0;
     right: 0;
     display: flex;
-    justify-content: center;
+    justify-content: space-between;
     padding: 16px;
     /* Safe area for devices with home indicator */
     padding-bottom: max(32px, env(safe-area-inset-bottom));
@@ -317,7 +317,7 @@ b {
     pointer-events: auto;
 }
 
-/* Container for undo and redo buttons that expands to fill space */
+/* Container for undo and redo buttons with content-based width */
 .undo-redo-container {
     flex: 1;
     display: flex;
@@ -326,11 +326,10 @@ b {
     margin: 0 16px; /* 16px margin on left and right sides */
 }
 
-/* Make undo and redo buttons responsive to available space */
+/* Make undo and redo buttons have content-based width */
 .undo-redo-container .toolbar-btn {
-    flex: 1;
-    max-width: 120px; /* Prevent buttons from getting too wide */
-    min-width: 48px;  /* Ensure minimum touch target size */;
+    width: 100%;
+    min-width: 48px;  /* Ensure minimum touch target size */
 }
 
 .undo-redo-container .toolbar-btn:first-child {
@@ -348,7 +347,7 @@ b {
 .toolbar-btn:not(:disabled):active, .toolbar-btn:first-child:not(:disabled):active, .toolbar-btn:last-child:not(:disabled):active{
                                                         
     background-color: var(--surface-active);
-    padding: 0 20px;
+    padding: 0 24px;
     transition: all 0.25s ease;
     border-radius: 100px;
 }
