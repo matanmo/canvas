@@ -1186,8 +1186,12 @@ class DrawingApp {
             }
             
             // Always use white background for export to ensure eraser strokes work properly
+            // Clear the entire canvas first to remove any artifacts
+            offscreenCtx.clearRect(0, 0, offscreenCanvas.width, offscreenCanvas.height);
+            
+            // Fill with white background - use the actual canvas dimensions
             offscreenCtx.fillStyle = '#FFFFFF';
-            offscreenCtx.fillRect(0, 0, width, height);
+            offscreenCtx.fillRect(0, 0, offscreenCanvas.width, offscreenCanvas.height);
             
             // Set up drawing style - always use black for export to ensure visibility on white background
             offscreenCtx.strokeStyle = '#000000';
