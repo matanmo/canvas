@@ -253,7 +253,7 @@ b {
     left: 0;
     right: 0;
     display: flex;
-    justify-content: space-between;
+    justify-content: center;
     padding: 16px;
     /* Safe area for devices with home indicator */
     padding-bottom: max(32px, env(safe-area-inset-bottom));
@@ -322,6 +322,7 @@ b {
     flex: 1;
     display: flex;
     justify-content: center;
+    max-width: 320px;
     gap: 4px;
     margin: 0 16px; /* 16px margin on left and right sides */
 }

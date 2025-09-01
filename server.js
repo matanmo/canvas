@@ -15,10 +15,12 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-app.listen(PORT, () => {
+// Listen on all network interfaces (0.0.0.0) instead of just localhost
+app.listen(PORT, '0.0.0.0', () => {
     console.log(`
 🚀 Simple development server running!
 📱 Open your browser to: http://localhost:${PORT}
+🌐 Or access from other devices on your network: http://[YOUR_IP]:${PORT}
 📝 Manual refresh needed - no hot reload (to avoid Dropbox sync issues)
     `);
 });
