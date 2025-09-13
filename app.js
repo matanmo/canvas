@@ -125,7 +125,7 @@ class DrawingApp {
         this.lastTwoFingerCenter = { x: 0, y: 0 };
         
         // Lazy brush state (smooth drawing)
-        this.lazyRadius = 15; // Radius of lazy area
+        this.lazyRadius = 8; // Radius of lazy area
         this.pointerPos = { x: 0, y: 0 }; // Current pointer position
         this.brushPos = { x: 0, y: 0 }; // Current brush position
         this.lazyEnabled = true;
