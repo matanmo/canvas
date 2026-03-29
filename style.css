@@ -352,7 +352,7 @@ b {
 .toolbar-btn:first-child:not(:disabled):not(.toolbar-btn--disabled):active,
 .toolbar-btn:last-child:not(:disabled):not(.toolbar-btn--disabled):active {
     background-color: var(--surface-active);
-    padding: 0 40px;
+    padding: 0 24px;
     transition: all 0.25s ease;
     border-radius: 100px;
 }
@@ -410,35 +410,6 @@ body.clear-confirm-mode .toolbar-btn:not(#clearBtn).toolbar-btn--disabled {
     background-color: var(--surface-disabled);
     color: rgba(0, 0, 0, 0.1); /* Extra faded */
     transition: all 0.3s ease;
-}
-
-/* Enhanced safe area support for home screen web app (standalone mode) */
-@media (display-mode: standalone) {
-    .toolbar {
-        /* Let safe-area-inset-bottom handle the spacing instead of fixed bottom offset */
-        padding-bottom: max(48px, env(safe-area-inset-bottom) + 16px);
-    }
-}
-
-/* Alternative detection for iOS standalone mode */
-@media all and (display-mode: standalone) {
-    .toolbar {
-        padding-bottom: max(48px, env(safe-area-inset-bottom) + 16px);
-    }
-}
-
-/* Fallback for older iOS versions that don't support display-mode */
-@supports (-webkit-touch-callout: none) {
-    @media (display-mode: standalone) {
-        .toolbar {
-            padding-bottom: max(48px, env(safe-area-inset-bottom) + 16px);
-        }
-    }
-}
-
-/* JavaScript-detected standalone mode - most reliable method */
-body.standalone-mode .toolbar {
-    padding-bottom: max(48px, env(safe-area-inset-bottom) + 16px);
 }
 
 /* Splash Screen Styles */

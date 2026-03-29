@@ -1,8 +1,57 @@
 // Vector Drawing Canvas App
 // Minimal implementation with smooth drawing, pan/zoom, and sharing
 
-// Haptics: vendored Tactus (see vendor/tactus.mjs) — node_modules is not on GitHub Pages
-import { triggerHaptic } from './vendor/tactus.mjs';
+// --- Tactus (MIT) — https://github.com/aadeexyz/tactus — inlined so one script file loads everywhere (no ES module / .mjs fetch on GitHub Pages or strict MIME hosts)
+const HAPTIC_ID = '___haptic-switch___';
+const HAPTIC_DURATION_MS = 10;
+
+function tactusIsIOS() {
+    if (typeof navigator === 'undefined' || typeof window === 'undefined') return false;
+    const iOSDevice = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    const iPadOS = navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1;
+    return iOSDevice || iPadOS;
+}
+
+let tactusInput = null;
+let tactusLabel = null;
+
+function tactusMount() {
+    if (tactusLabel && tactusInput) return;
+    tactusInput = document.querySelector(`#${HAPTIC_ID}`);
+    tactusLabel = document.querySelector(`label[for="${HAPTIC_ID}"]`);
+    if (tactusInput && tactusLabel) return;
+    tactusInput = document.createElement('input');
+    tactusInput.type = 'checkbox';
+    tactusInput.id = HAPTIC_ID;
+    tactusInput.setAttribute('switch', '');
+    tactusInput.style.display = 'none';
+    document.body.appendChild(tactusInput);
+    tactusLabel = document.createElement('label');
+    tactusLabel.htmlFor = HAPTIC_ID;
+    tactusLabel.style.display = 'none';
+    document.body.appendChild(tactusLabel);
+}
+
+if (typeof window !== 'undefined') {
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', tactusMount, { once: true });
+    } else {
+        tactusMount();
+    }
+}
+
+function triggerHaptic(duration = HAPTIC_DURATION_MS) {
+    if (typeof window === 'undefined') return;
+    if (tactusIsIOS()) {
+        if (!tactusInput || !tactusLabel) tactusMount();
+        tactusLabel?.click();
+    } else if (navigator?.vibrate) {
+        navigator.vibrate(duration);
+    } else {
+        if (!tactusInput || !tactusLabel) tactusMount();
+        tactusLabel?.click();
+    }
+}
 
 // Triple "tik tik tik" when tool toggle is tapped but eraser is unavailable (no strokes yet)
 let lastDisabledToolToggleHapticAt = 0;
