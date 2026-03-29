@@ -1,8 +1,8 @@
 // Vector Drawing Canvas App
 // Minimal implementation with smooth drawing, pan/zoom, and sharing
 
-// Haptics (Tactus): named export only — wrong path/default broke the whole script before
-import { triggerHaptic } from './node_modules/tactus/dist/index.mjs';
+// Haptics: vendored Tactus (see vendor/tactus.mjs) — node_modules is not on GitHub Pages
+import { triggerHaptic } from './vendor/tactus.mjs';
 
 // Triple "tik tik tik" when tool toggle is tapped but eraser is unavailable (no strokes yet)
 let lastDisabledToolToggleHapticAt = 0;
