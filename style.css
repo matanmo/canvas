@@ -427,12 +427,16 @@ body.clear-confirm-mode .toolbar-btn:not(#clearBtn).toolbar-btn--disabled {
     z-index: 1003; /* Above everything including tool selector toggle */
     background-color: var(--background); /* Solid white background */
     opacity: 1;
-    transition: opacity 0.3s ease-out;
+    visibility: visible;
+    transition: opacity 0.3s ease-out, visibility 0s;
 }
 
 .splash-screen.hidden {
     opacity: 0;
     pointer-events: none; /* Prevent interaction when hidden */
+    visibility: hidden;
+    /* After fade, JS sets display:none so home-screen WebKit cannot keep hit-testing this layer */
+    transition: opacity 0.3s ease-out, visibility 0s linear 0.3s;
 }
 
 .splash-content {

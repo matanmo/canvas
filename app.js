@@ -17,19 +17,24 @@ let tactusLabel = null;
 
 function tactusMount() {
     if (tactusLabel && tactusInput) return;
-    tactusInput = document.querySelector(`#${HAPTIC_ID}`);
-    tactusLabel = document.querySelector(`label[for="${HAPTIC_ID}"]`);
-    if (tactusInput && tactusLabel) return;
-    tactusInput = document.createElement('input');
-    tactusInput.type = 'checkbox';
-    tactusInput.id = HAPTIC_ID;
-    tactusInput.setAttribute('switch', '');
-    tactusInput.style.display = 'none';
-    document.body.appendChild(tactusInput);
-    tactusLabel = document.createElement('label');
-    tactusLabel.htmlFor = HAPTIC_ID;
-    tactusLabel.style.display = 'none';
-    document.body.appendChild(tactusLabel);
+    try {
+        tactusInput = document.querySelector(`#${HAPTIC_ID}`);
+        tactusLabel = document.querySelector(`label[for="${HAPTIC_ID}"]`);
+        if (tactusInput && tactusLabel) return;
+        if (!document.body) return;
+        tactusInput = document.createElement('input');
+        tactusInput.type = 'checkbox';
+        tactusInput.id = HAPTIC_ID;
+        tactusInput.setAttribute('switch', '');
+        tactusInput.style.display = 'none';
+        document.body.appendChild(tactusInput);
+        tactusLabel = document.createElement('label');
+        tactusLabel.htmlFor = HAPTIC_ID;
+        tactusLabel.style.display = 'none';
+        document.body.appendChild(tactusLabel);
+    } catch (e) {
+        /* Home-screen WebKit can be strict; haptics are optional */
+    }
 }
 
 if (typeof window !== 'undefined') {
@@ -42,14 +47,18 @@ if (typeof window !== 'undefined') {
 
 function triggerHaptic(duration = HAPTIC_DURATION_MS) {
     if (typeof window === 'undefined') return;
-    if (tactusIsIOS()) {
-        if (!tactusInput || !tactusLabel) tactusMount();
-        tactusLabel?.click();
-    } else if (navigator?.vibrate) {
-        navigator.vibrate(duration);
-    } else {
-        if (!tactusInput || !tactusLabel) tactusMount();
-        tactusLabel?.click();
+    try {
+        if (tactusIsIOS()) {
+            if (!tactusInput || !tactusLabel) tactusMount();
+            tactusLabel?.click();
+        } else if (navigator?.vibrate) {
+            navigator.vibrate(duration);
+        } else {
+            if (!tactusInput || !tactusLabel) tactusMount();
+            tactusLabel?.click();
+        }
+    } catch (e) {
+        /* iOS standalone often rejects synthetic clicks; must not break the app */
     }
 }
 
@@ -64,7 +73,9 @@ function triggerDisabledToolToggleHaptic() {
         (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 
     if (typeof navigator.vibrate === 'function') {
-        navigator.vibrate([10, 45, 10, 45, 10]);
+        try {
+            navigator.vibrate([10, 45, 10, 45, 10]);
+        } catch (e) { /* ignore */ }
     }
     if (isIOS || typeof navigator.vibrate !== 'function') {
         triggerHaptic();
@@ -232,7 +243,12 @@ class DrawingApp {
     // Splash screen management
     setupSplashScreen() {
         // Check if user has seen the splash screen before
-        const hasSeenSplash = localStorage.getItem('canvas-app-splash-seen') === 'true';
+        let hasSeenSplash = false;
+        try {
+            hasSeenSplash = localStorage.getItem('canvas-app-splash-seen') === 'true';
+        } catch (e) {
+            /* Treat as first launch if storage is unavailable (rare in home-screen) */
+        }
         
         // Show splash screen if first time or if forced for testing
         if (!hasSeenSplash || this.shouldShowSplashForTesting()) {
@@ -276,6 +292,7 @@ class DrawingApp {
     
     // Show the splash screen and disable drawing
     showSplashScreen() {
+        this.splashScreen.style.removeProperty('display');
         this.splashScreen.classList.remove('hidden');
         this.drawingEnabled = false;
         console.log('Splash screen shown - drawing disabled');
@@ -290,13 +307,25 @@ class DrawingApp {
             this.drawingEnabled = true;
             console.log('Splash screen hidden - drawing enabled');
         }, 300); // 0.3 seconds to match CSS transition
+        
+        // iOS home-screen: invisible fixed layers can still steal touches; remove overlay from layout
+        setTimeout(() => {
+            this.splashScreen.style.display = 'none';
+        }, 320);
     }
     
     // Dismiss splash screen and remember user has seen it
     dismissSplashScreen() {
-        triggerHaptic();
+        // Haptics first must never block enabling drawing (home-screen WebKit is picky)
+        try {
+            triggerHaptic();
+        } catch (e) { /* ignore */ }
         this.hideSplashScreen();
-        localStorage.setItem('canvas-app-splash-seen', 'true');
+        try {
+            localStorage.setItem('canvas-app-splash-seen', 'true');
+        } catch (e) {
+            /* Some home-screen / private contexts restrict storage */
+        }
         // Clear any testing flags
         sessionStorage.removeItem('canvas-force-splash');
         console.log('Splash screen dismissed and saved to localStorage');
