@@ -1,6 +1,29 @@
 // Vector Drawing Canvas App
 // Minimal implementation with smooth drawing, pan/zoom, and sharing
 
+// Haptics (Tactus): named export only — wrong path/default broke the whole script before
+import { triggerHaptic } from './node_modules/tactus/dist/index.mjs';
+
+// Triple "tik tik tik" when tool toggle is tapped but eraser is unavailable (no strokes yet)
+let lastDisabledToolToggleHapticAt = 0;
+function triggerDisabledToolToggleHaptic() {
+    const now = Date.now();
+    if (now - lastDisabledToolToggleHapticAt < 400) return;
+    lastDisabledToolToggleHapticAt = now;
+
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+        (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+    if (typeof navigator.vibrate === 'function') {
+        navigator.vibrate([10, 45, 10, 45, 10]);
+    }
+    if (isIOS || typeof navigator.vibrate !== 'function') {
+        triggerHaptic();
+        setTimeout(() => triggerHaptic(), 52);
+        setTimeout(() => triggerHaptic(), 104);
+    }
+}
+
 // Detect if app is running in standalone mode (home screen web app)
 function detectStandaloneMode() {
     if (window.navigator.standalone === true || window.matchMedia('(display-mode: standalone)').matches) {
@@ -222,6 +245,7 @@ class DrawingApp {
     
     // Dismiss splash screen and remember user has seen it
     dismissSplashScreen() {
+        triggerHaptic();
         this.hideSplashScreen();
         localStorage.setItem('canvas-app-splash-seen', 'true');
         // Clear any testing flags
@@ -1041,11 +1065,9 @@ class DrawingApp {
         this.exitClearConfirmMode();
     }
     
-    // Disable other buttons when in confirm mode
+    // Disable other buttons when in confirm mode (undo/redo use soft-disable via updateUI)
     disableOtherButtons() {
-        document.getElementById('undoBtn').disabled = true;
-        document.getElementById('redoBtn').disabled = true;
-        document.getElementById('shareBtn').disabled = true;
+        this.updateUI();
     }
     
     // Outside click listener management
@@ -1347,60 +1369,93 @@ class DrawingApp {
 
     // UI setup and updates
     setupUI() {
-        // Protected button handler prevents multiple rapid calls
-        const addButtonHandler = (id, handler) => {
+        // Toolbar buttons that look disabled but still receive taps (haptic + shake)
+        const addSoftDisabledToolbarHandler = (id, isActionBlocked, handler, shakeSelector) => {
             const btn = document.getElementById(id);
             let isProcessing = false;
             let lastEventTime = 0;
             
-            const protectedHandler = (eventType) => {
-                // Prevent multiple rapid calls within 100ms
+            const protectedHandler = () => {
                 const now = Date.now();
                 if (isProcessing || (now - lastEventTime) < 100) {
                     return;
                 }
                 
-                isProcessing = true;
-                lastEventTime = now;
-                
-                // Only execute if button is not disabled
-                if (!btn.disabled) {
-                    try {
-                        handler();
-                    } catch (error) {
-                        console.error(`Button handler error for ${id}:`, error);
+                if (isActionBlocked.call(this)) {
+                    isProcessing = true;
+                    lastEventTime = now;
+                    triggerDisabledToolToggleHaptic();
+                    const shakeEl = document.querySelector(shakeSelector);
+                    if (shakeEl) {
+                        shakeEl.classList.add('shake');
+                        setTimeout(() => shakeEl.classList.remove('shake'), 300);
                     }
+                    setTimeout(() => {
+                        isProcessing = false;
+                    }, 50);
+                    return;
                 }
                 
-                // Reset processing flag after a short delay
+                isProcessing = true;
+                lastEventTime = now;
+                try {
+                    triggerHaptic();
+                    handler.call(this);
+                } catch (error) {
+                    console.error(`Button handler error for ${id}:`, error);
+                }
                 setTimeout(() => {
                     isProcessing = false;
                 }, 50);
             };
             
-            // Add click handler for desktop/mouse
             btn.addEventListener('click', (e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                protectedHandler('click');
+                protectedHandler();
             });
             
-            // Add touchend handler for mobile with extra protection
             btn.addEventListener('touchend', (e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                
-                // Only trigger on single finger release
                 if (e.touches.length === 0 && e.changedTouches.length === 1) {
-                    protectedHandler('touchend');
+                    protectedHandler();
                 }
             }, { passive: false });
         };
         
-        addButtonHandler('undoBtn', () => this.undo());
-        addButtonHandler('redoBtn', () => this.redo());
-        addButtonHandler('clearBtn', () => this.handleClearClick());
-        addButtonHandler('shareBtn', () => this.share());
+        addSoftDisabledToolbarHandler(
+            'undoBtn',
+            function undoBlocked() {
+                return this.historyIndex < 0 || !this.drawingEnabled || this.clearConfirmMode;
+            },
+            () => this.undo(),
+            '.undo-redo-container'
+        );
+        addSoftDisabledToolbarHandler(
+            'redoBtn',
+            function redoBlocked() {
+                return this.historyIndex >= this.history.length - 1 || !this.drawingEnabled || this.clearConfirmMode;
+            },
+            () => this.redo(),
+            '.undo-redo-container'
+        );
+        addSoftDisabledToolbarHandler(
+            'clearBtn',
+            function clearBlocked() {
+                return this.strokes.length === 0 || !this.drawingEnabled;
+            },
+            () => this.handleClearClick(),
+            '#clearBtn'
+        );
+        addSoftDisabledToolbarHandler(
+            'shareBtn',
+            function shareBlocked() {
+                return this.strokes.length === 0 || !this.drawingEnabled || this.clearConfirmMode;
+            },
+            () => this.share(),
+            '#shareBtn'
+        );
         
         // Setup tool selector
         this.setupToolSelector();
@@ -1409,16 +1464,68 @@ class DrawingApp {
     }
 
     updateUI() {
-        // If splash screen is visible, disable all toolbar buttons except when in confirm mode
         const splashVisible = !this.drawingEnabled;
+        const confirmBlock = this.clearConfirmMode;
         
-        document.getElementById('undoBtn').disabled = this.historyIndex < 0 || splashVisible;
-        document.getElementById('redoBtn').disabled = this.historyIndex >= this.history.length - 1 || splashVisible;
-        document.getElementById('clearBtn').disabled = this.strokes.length === 0 || splashVisible;
-        document.getElementById('shareBtn').disabled = this.strokes.length === 0 || splashVisible;
+        // Undo/redo: soft-disable so taps still reach handlers (haptics + shake)
+        this.setUndoRedoSoftDisabled(
+            this.historyIndex < 0 || splashVisible || confirmBlock,
+            this.historyIndex >= this.history.length - 1 || splashVisible || confirmBlock
+        );
+        
+        this.setClearShareSoftDisabled(
+            this.strokes.length === 0 || splashVisible,
+            this.strokes.length === 0 || splashVisible || confirmBlock
+        );
         
         // Update tool selector state
         this.updateToolSelector();
+    }
+    
+    // Undo/redo look disabled but stay clickable for feedback
+    setUndoRedoSoftDisabled(undoBlocked, redoBlocked) {
+        const undoBtn = document.getElementById('undoBtn');
+        const redoBtn = document.getElementById('redoBtn');
+        
+        undoBtn.classList.toggle('toolbar-btn--disabled', undoBlocked);
+        redoBtn.classList.toggle('toolbar-btn--disabled', redoBlocked);
+        if (undoBlocked) {
+            undoBtn.setAttribute('aria-disabled', 'true');
+            undoBtn.tabIndex = -1;
+        } else {
+            undoBtn.removeAttribute('aria-disabled');
+            undoBtn.tabIndex = 0;
+        }
+        if (redoBlocked) {
+            redoBtn.setAttribute('aria-disabled', 'true');
+            redoBtn.tabIndex = -1;
+        } else {
+            redoBtn.removeAttribute('aria-disabled');
+            redoBtn.tabIndex = 0;
+        }
+    }
+    
+    // Clear / share: same soft-disable pattern as undo/redo
+    setClearShareSoftDisabled(clearBlocked, shareBlocked) {
+        const clearBtn = document.getElementById('clearBtn');
+        const shareBtn = document.getElementById('shareBtn');
+        
+        clearBtn.classList.toggle('toolbar-btn--disabled', clearBlocked);
+        shareBtn.classList.toggle('toolbar-btn--disabled', shareBlocked);
+        if (clearBlocked) {
+            clearBtn.setAttribute('aria-disabled', 'true');
+            clearBtn.tabIndex = -1;
+        } else {
+            clearBtn.removeAttribute('aria-disabled');
+            clearBtn.tabIndex = 0;
+        }
+        if (shareBlocked) {
+            shareBtn.setAttribute('aria-disabled', 'true');
+            shareBtn.tabIndex = -1;
+        } else {
+            shareBtn.removeAttribute('aria-disabled');
+            shareBtn.tabIndex = 0;
+        }
     }
     
     // Setup theme observer to detect light/dark mode changes
@@ -1477,6 +1584,7 @@ class DrawingApp {
             // If eraser is disabled, only allow switching to brush
             const hasStrokes = this.strokes.length > 0;
             if (!hasStrokes) {
+                triggerDisabledToolToggleHaptic();
                 // If trying to switch to eraser while disabled, show shake animation
                 if (this.currentTool === 'brush') {
                     this.triggerShakeAnimation();
@@ -1561,6 +1669,7 @@ class DrawingApp {
             // If eraser is disabled, only allow switching to brush
             const hasStrokes = this.strokes.length > 0;
             if (!hasStrokes) {
+                triggerDisabledToolToggleHaptic();
                 // If trying to switch to eraser while disabled, show shake animation
                 if (this.currentTool === 'brush') {
                     this.triggerShakeAnimation();
@@ -1610,6 +1719,7 @@ class DrawingApp {
     setTool(tool) {
         if (tool === this.currentTool) return;
         
+        triggerHaptic();
         this.currentTool = tool;
         
         // Update UI
@@ -1664,6 +1774,7 @@ class DrawingApp {
             toolToggle.classList.remove('shake');
         }, 300); // Match the CSS animation duration
     }
+    
 }
 
 // Initialize the app when DOM is loaded

@@ -5,7 +5,8 @@ const express = require('express');
 const path = require('path');
 
 const app = express();
-const PORT = 3000;
+// Use PORT from the environment, or 3000 if unset (lets you run alongside another app on 3000)
+const PORT = Number(process.env.PORT) || 3000;
 
 // Serve static files from current directory
 app.use(express.static('.'));

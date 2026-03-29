@@ -6,7 +6,7 @@
     --background-secondary: rgba(242, 242, 242, 0.6);
     --background-toolbar: rgba(255, 255, 255, 0.6);
     --surface: rgba(0, 0, 0, 0.05);
-    --surface-active: rgba(0, 0, 0, 0.2);
+    --surface-active: rgba(0, 0, 0, 0.4);
     --surface-disabled: rgba(0, 0, 0, 0.025);
     --brand: #007AFF;
     --brand-active: #004999;
@@ -21,7 +21,7 @@
         --background-secondary: rgba(255, 255, 255, 0.1);
         --background-toolbar: rgba(31, 31, 33, 0.6);
         --surface: rgba(255, 255, 255, 0.05);
-        --surface-active: rgba(255, 255, 255, 0.2);
+        --surface-active: rgba(255, 255, 255, 0.4);
         --surface-disabled: rgba(255, 255, 255, 0.025);
         --brand: #148EFF;
         --brand-active: #0C5599;
@@ -145,7 +145,10 @@ b {
     75% { transform: translateX(6px); }
 }
 
-.tool-toggle.shake {
+.tool-toggle.shake,
+.undo-redo-container.shake,
+#clearBtn.shake,
+#shareBtn.shake {
     animation: shake 0.3s ease-in-out;
 }
 
@@ -334,26 +337,28 @@ b {
 }
 
 .undo-redo-container .toolbar-btn:first-child {
-    border-radius: 24px 12px 12px 24px;
+    border-radius: 24px;
 }
 
 .undo-redo-container .toolbar-btn:last-child {
-    border-radius: 12px 24px 24px 12px;
+    border-radius: 24px;
 }
 
 
     
 
 
-.toolbar-btn:not(:disabled):active, .toolbar-btn:first-child:not(:disabled):active, .toolbar-btn:last-child:not(:disabled):active{
-                                                        
+.toolbar-btn:not(:disabled):not(.toolbar-btn--disabled):active,
+.toolbar-btn:first-child:not(:disabled):not(.toolbar-btn--disabled):active,
+.toolbar-btn:last-child:not(:disabled):not(.toolbar-btn--disabled):active {
     background-color: var(--surface-active);
-    padding: 0 24px;
+    padding: 0 40px;
     transition: all 0.25s ease;
     border-radius: 100px;
 }
 
-.toolbar-btn:disabled {
+.toolbar-btn:disabled,
+.toolbar-btn.toolbar-btn--disabled {
     cursor: not-allowed;
     color: var(--disabled);
     transition: all 0.4s ease;
@@ -367,7 +372,7 @@ b {
 }
 
 /* Share button active state - slightly lighter version of primary */
-#shareBtn:not(:disabled):active {
+#shareBtn:not(:disabled):not(.toolbar-btn--disabled):active {
     padding: 0 20px;
     background-color: var(--brand-active);
     transition: all 0.25s ease;
@@ -375,7 +380,8 @@ b {
 }
 
 /* Keep disabled state the same for share button */
-#shareBtn:disabled {
+#shareBtn:disabled,
+#shareBtn.toolbar-btn--disabled {
     background-color: var(--surface-disabled);
     cursor: not-allowed;
     color: var(--disabled);
@@ -391,7 +397,7 @@ b {
 }
 
 /* Clear button active state when in confirm mode */
-#clearBtn.confirm-mode:not(:disabled):active {
+#clearBtn.confirm-mode:not(:disabled):not(.toolbar-btn--disabled):active {
     background-color: var(--remove-active); /* Darker red for active state */
     padding: 0 56px;
     transition: all 0.25s ease;
@@ -399,7 +405,8 @@ b {
 }
 
 /* When clear is in confirm mode, other buttons appear more disabled */
-body.clear-confirm-mode .toolbar-btn:not(#clearBtn):disabled {
+body.clear-confirm-mode .toolbar-btn:not(#clearBtn):disabled,
+body.clear-confirm-mode .toolbar-btn:not(#clearBtn).toolbar-btn--disabled {
     background-color: var(--surface-disabled);
     color: rgba(0, 0, 0, 0.1); /* Extra faded */
     transition: all 0.3s ease;

@@ -65,14 +65,15 @@
     
     <!-- Minimal bottom toolbar -->
     <div class="toolbar">
-        <button id="clearBtn" class="toolbar-btn" disabled>delete</button>
+        <button type="button" id="clearBtn" class="toolbar-btn toolbar-btn--disabled" aria-disabled="true" tabindex="-1">delete</button>
         <div class="undo-redo-container">
-            <button id="undoBtn" class="toolbar-btn" disabled>undo</button>
-            <button id="redoBtn" class="toolbar-btn" disabled>redo</button>
+            <!-- Not native disabled so taps still fire (haptics + shake when nothing to undo/redo) -->
+            <button type="button" id="undoBtn" class="toolbar-btn toolbar-btn--disabled" aria-disabled="true" tabindex="-1">undo</button>
+            <button type="button" id="redoBtn" class="toolbar-btn toolbar-btn--disabled" aria-disabled="true" tabindex="-1">redo</button>
         </div>
-        <button id="shareBtn" class="toolbar-btn" disabled>ios_share</button>
+        <button type="button" id="shareBtn" class="toolbar-btn toolbar-btn--disabled" aria-disabled="true" tabindex="-1">ios_share</button>
     </div>
     
-    <script src="app.js?v=3"></script>
+    <script type="module" src="app.js?v=3"></script>
 </body>
 </html>
