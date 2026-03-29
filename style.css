@@ -412,6 +412,31 @@ body.clear-confirm-mode .toolbar-btn:not(#clearBtn).toolbar-btn--disabled {
     transition: all 0.3s ease;
 }
 
+/* Enhanced safe area support for home screen web app (standalone mode) */
+@media (display-mode: standalone) {
+    .toolbar {
+        padding-bottom: max(48px, env(safe-area-inset-bottom) + 16px);
+    }
+}
+
+@media all and (display-mode: standalone) {
+    .toolbar {
+        padding-bottom: max(48px, env(safe-area-inset-bottom) + 16px);
+    }
+}
+
+@supports (-webkit-touch-callout: none) {
+    @media (display-mode: standalone) {
+        .toolbar {
+            padding-bottom: max(48px, env(safe-area-inset-bottom) + 16px);
+        }
+    }
+}
+
+body.standalone-mode .toolbar {
+    padding-bottom: max(48px, env(safe-area-inset-bottom) + 16px);
+}
+
 /* Splash Screen Styles */
 .splash-screen {
     position: fixed;
