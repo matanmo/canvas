@@ -18,6 +18,8 @@
     
     <!-- Material Icons font -->
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20,400,0,0" rel="stylesheet">
+    <!-- Load app CSS here (not via async loader) so .splash-screen.hidden applies before first paint — no splash flash -->
+    <link rel="stylesheet" href="style.css?b=10">
 </head>
 <body>
     <!-- Splash screen overlay -->
@@ -74,23 +76,18 @@
         <button type="button" id="shareBtn" class="toolbar-btn toolbar-btn--disabled" aria-disabled="true" tabindex="-1">ios_share</button>
     </div>
     
-    <!-- Load app CSS/JS with a fresh build id so home-screen Web Apps get updates without re-adding the icon (cached index.html still runs this fetch) -->
+    <!-- Fresh app.js URL from version.json so home-screen apps get JS updates; CSS is synchronous in <head> above -->
     <script>
     (function () {
-        function inject(build) {
-            var b = encodeURIComponent(build);
-            var link = document.createElement('link');
-            link.rel = 'stylesheet';
-            link.href = 'style.css?b=' + b;
-            document.head.appendChild(link);
-            var script = document.createElement('script');
-            script.src = 'app.js?b=' + b;
-            document.body.appendChild(script);
+        function loadAppJs(build) {
+            var s = document.createElement('script');
+            s.src = 'app.js?b=' + encodeURIComponent(build);
+            document.body.appendChild(s);
         }
         fetch('version.json', { cache: 'no-store', credentials: 'same-origin' })
             .then(function (r) { return r.ok ? r.json() : Promise.reject(); })
-            .then(function (v) { inject(v.build); })
-            .catch(function () { inject(String(Date.now())); });
+            .then(function (v) { loadAppJs(v.build); })
+            .catch(function () { loadAppJs(String(Date.now())); });
     })();
     </script>
 </body>
