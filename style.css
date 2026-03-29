@@ -258,8 +258,8 @@ b {
     display: flex;
     justify-content: center;
     padding: 16px;
-    /* Home indicator: use real inset only, small fallback (avoids double “empty” band with viewport quirks) */
-    padding-bottom: max(12px, env(safe-area-inset-bottom, 0px));
+    /* Safe area for devices with home indicator */
+    padding-bottom: max(32px, env(safe-area-inset-bottom));
     background: var(--background-toolbar);
     backdrop-filter: blur(100px);
     /* Prevent iOS magnifying glass on toolbar */
