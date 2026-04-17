@@ -19,7 +19,7 @@
     <!-- Material Icons font -->
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20,400,0,0" rel="stylesheet">
     <!-- Load app CSS here (not via async loader) so .splash-screen.hidden applies before first paint — no splash flash -->
-    <link rel="stylesheet" href="style.css?b=11">
+    <link rel="stylesheet" href="style.css?b=16">
 </head>
 <body>
     <!-- Splash screen overlay -->
@@ -49,19 +49,41 @@
         </div>
     </div>
 
-    <!-- Main drawing canvas -->
-    <canvas id="drawingCanvas"></canvas>
+    <!-- Drawing + text overlay (text is always above strokes) -->
+    <div class="canvas-stack">
+        <canvas id="drawingCanvas"></canvas>
+        <div id="textLayer" class="text-layer" aria-hidden="true"></div>
+    </div>
+
+    <!-- Shown when a text label is selected: size, align, delete -->
+    <div id="textEditPanel" class="text-edit-panel hidden" aria-hidden="true">
+        <button type="button" id="textSizeDecreaseBtn" class="text-edit-panel__icon-btn" aria-label="Decrease text size">
+            <span class="material-symbols-rounded text-edit-panel__icon">text_decrease</span>
+        </button>
+        <button type="button" id="textSizeIncreaseBtn" class="text-edit-panel__icon-btn" aria-label="Increase text size">
+            <span class="material-symbols-rounded text-edit-panel__icon">text_increase</span>
+        </button>
+        <button type="button" id="textAlignBtn" class="text-edit-panel__icon-btn" aria-label="Align text center">
+            <span class="material-symbols-rounded text-edit-panel__align-icon">format_align_center</span>
+        </button>
+        <span class="text-edit-panel__divider" aria-hidden="true">⋮</span>
+        <button type="button" id="textDeleteBtn" class="text-edit-panel__icon-btn text-edit-panel__btn--danger" aria-label="Remove text">
+            <span class="material-symbols-rounded text-edit-panel__icon">delete</span>
+        </button>
+    </div>
     
-    <!-- Tool selector toggle -->
+    <!-- Brush/eraser toggle -->
     <div class="tool-selector">
-        <div class="tool-toggle eraser-disabled">
-            <button id="brushBtn" class="tool-option active" data-tool="brush">
-                <span class="material-symbols-rounded">stylus</span>
-            </button>
-            <button id="eraserBtn" class="tool-option" data-tool="eraser" disabled>
-                <span class="material-symbols-rounded">ink_eraser</span>
-            </button>
-            <div class="toggle-handle"></div>
+        <div class="tool-selector-row">
+            <div class="tool-toggle eraser-disabled">
+                <button id="brushBtn" class="tool-option active" data-tool="brush">
+                    <span class="material-symbols-rounded">stylus</span>
+                </button>
+                <button id="eraserBtn" class="tool-option" data-tool="eraser" disabled>
+                    <span class="material-symbols-rounded">ink_eraser</span>
+                </button>
+                <div class="toggle-handle"></div>
+            </div>
         </div>
     </div>
     

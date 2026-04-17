@@ -8,6 +8,7 @@
     --surface: rgba(0, 0, 0, 0.05);
     --surface-active: rgba(0, 0, 0, 0.4);
     --surface-disabled: rgba(0, 0, 0, 0.025);
+    --surface-silled: #F4F4F4;
     --brand: #007AFF;
     --brand-active: #004999;
     --remove: #FF2D55;
@@ -23,6 +24,7 @@
         --surface: rgba(255, 255, 255, 0.05);
         --surface-active: rgba(255, 255, 255, 0.4);
         --surface-disabled: rgba(255, 255, 255, 0.025);
+        --surface-silled: #2F2F31;
         --brand: #148EFF;
         --brand-active: #0C5599;
         --remove: #FF4169;
@@ -71,14 +73,23 @@ b {
     font-weight: 600;
 }
 
+/* Canvas + text overlay stack (text sits above drawing) */
+.canvas-stack {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+}
+
 /* Fullscreen canvas */
 #drawingCanvas {
+    position: absolute;
+    left: 0;
+    top: 0;
     display: block;
-    width: 100vw;
-    height: 100vh;
-    /* Ensure canvas always fills the viewport, even on orientation change */
-    min-width: 100vw;
-    min-height: 100vh;
+    width: 100%;
+    height: 100%;
+    min-width: 100%;
+    min-height: 100%;
     background-color: var(--background);
     cursor: crosshair;
     /* Critical touch handling - allow custom zoom but prevent browser zoom */
@@ -107,6 +118,187 @@ b {
     outline: none;
 }
 
+/* Text labels above the canvas (pointer-events off on layer; on per item) */
+.text-layer {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    overflow: hidden;
+}
+
+.canvas-text-item {
+    position: absolute;
+    left: 0;
+    top: 0;
+    pointer-events: auto;
+    transform: translate(-50%, -50%);
+    width: max-content;
+    max-width: none;
+    touch-action: none;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+.canvas-text-item__body {
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+    width: max-content;
+    max-width: none;
+}
+
+.canvas-text-item__input {
+    flex: 0 0 auto;
+    width: auto;
+    min-width: 1.5em;
+    field-sizing: content;
+    box-sizing: border-box;
+    padding: 0.333em 0.5em;
+    border: none;
+    border-radius: 1em;
+    background: transparent;
+    color: var(--primary);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-size: 24px;
+    font-weight: 500;
+    line-height: 1.25;
+    text-align: center;
+    resize: none;
+    overflow: hidden;
+    outline: none;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+.canvas-text-item__input::placeholder {
+    color: var(--disabled);
+    opacity: 1;
+}
+
+.canvas-text-item.selected .canvas-text-item__input {
+    box-shadow: 0 0 0 2px var(--brand);
+}
+
+.canvas-text-item--bg .canvas-text-item__input {
+    background-color: var(--surface-silled);
+    backdrop-filter: blur(20px);
+}
+
+/* Keep textbox visual stable while pressing/tapping (no dark flash) */
+.canvas-text-item__input:active {
+    opacity: 1;
+    filter: none;
+}
+
+/* Text options bar: full width minus 8px each side; top set in JS (safe area + gap) */
+.text-edit-panel {
+    position: fixed;
+    left: 8px;
+    right: 8px;
+    width: auto;
+    box-sizing: border-box;
+    /* Fallback before JS runs (hidden by default) */
+    top: calc(env(safe-area-inset-top) + 8px);
+    bottom: auto;
+    z-index: 1001;
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 8px;
+    padding: 16px;
+    background: var(--background-toolbar);
+    backdrop-filter: blur(100px);
+    border-radius: 100px;
+    touch-action: none;
+    -webkit-user-select: none;
+    user-select: none;
+    opacity: 1;
+    transform: scale(1);
+    filter: none;
+    transform-origin: top center;
+    will-change: opacity, transform, filter;
+    transition:
+        opacity 400ms ease,
+        transform 400ms cubic-bezier(0.4, 0, 1, 1),
+        filter 400ms ease,
+        visibility 0s linear 0s;
+}
+
+.text-edit-panel.hidden {
+    opacity: 0;
+    transform: scale(1);
+    filter: blur(4px);
+    visibility: hidden;
+    pointer-events: none;
+    transition:
+        opacity 400ms ease,
+        transform 400ms cubic-bezier(0.4, 0, 1, 1),
+        filter 400ms ease,
+        visibility 0s linear 400ms;
+}
+
+.text-edit-panel__icon-btn {
+    flex: 1 1 0;
+    min-width: 0;
+    height: 48px;
+    padding: 0 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    border-radius: 24px;
+    background-color: var(--surface);
+    color: var(--primary);
+    cursor: pointer;
+    touch-action: none;
+    -webkit-tap-highlight-color: transparent;
+    transition: all 0.20s ease;
+}
+
+.text-edit-panel__icon-btn:active {
+    background-color: var(--surface-active);
+    border-radius: 100px;
+    padding: 0 16px; /* +16px total width while pressed */
+}
+
+.text-edit-panel__icon,
+.text-edit-panel__align-icon {
+    font-family: 'Material Symbols Rounded';
+    font-size: 24px;
+    font-weight: 400;
+    line-height: 1;
+    color: var(--primary);
+    -webkit-font-smoothing: antialiased;
+}
+
+.text-edit-panel__divider {
+    flex: 0 0 auto;
+    width: 8px;
+    text-align: center;
+    color: var(--disabled);
+    font-size: 24px;
+    line-height: 1;
+    pointer-events: none;
+    user-select: none;
+}
+
+.text-edit-panel__btn--danger {
+    background-color: var(--surface);
+    color: var(--remove);
+}
+
+.text-edit-panel__btn--danger .text-edit-panel__icon {
+    color: var(--remove);
+}
+
+.text-edit-panel__btn--danger:active {
+    background-color: var(--surface-active);
+}
+
 /* Tool selector toggle - positioned at top center */
 .tool-selector {
     position: fixed;
@@ -117,6 +309,29 @@ b {
     padding: 16px;
     /* Safe area for devices with notch */
     padding-top: max(32px, env(safe-area-inset-top));
+    /* Wrapper should never block taps when row is hidden */
+    pointer-events: none;
+}
+
+/* Top toggle row */
+.tool-selector-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 1;
+    transform-origin: top center;
+    pointer-events: auto;
+    transition:
+        opacity 400ms ease,
+        transform 400ms cubic-bezier(0.4, 0, 1, 1),
+        filter 400ms ease;
+}
+
+body.canvas-text-editing-active .tool-selector-row {
+    opacity: 0;
+    transform: scale(1);
+    filter: blur(8px);
+    pointer-events: none;
 }
 
 .tool-toggle {
@@ -129,7 +344,7 @@ b {
     height: 48px;
     overflow: hidden;
     /* Add transition for background color changes */
-    transition: background-color 0.25s ease-in-out;
+    transition: background-color 0.20s ease-in-out;
     /* Prevent zoom on toggle */
     touch-action: none;
     -webkit-user-select: none;
@@ -146,6 +361,7 @@ b {
 }
 
 .tool-toggle.shake,
+.tool-selector-row.shake,
 .undo-redo-container.shake,
 #clearBtn.shake,
 #shareBtn.shake {
@@ -352,8 +568,8 @@ b {
 .toolbar-btn:first-child:not(:disabled):not(.toolbar-btn--disabled):active,
 .toolbar-btn:last-child:not(:disabled):not(.toolbar-btn--disabled):active {
     background-color: var(--surface-active);
-    padding: 0 24px;
-    transition: all 0.25s ease;
+    padding: 0 40px;
+    transition: all 0.20s ease;
     border-radius: 100px;
 }
 
@@ -375,7 +591,7 @@ b {
 #shareBtn:not(:disabled):not(.toolbar-btn--disabled):active {
     padding: 0 20px;
     background-color: var(--brand-active);
-    transition: all 0.25s ease;
+    transition: all 0.20s ease;
     border-radius: 100px;
 }
 
@@ -400,7 +616,7 @@ b {
 #clearBtn.confirm-mode:not(:disabled):not(.toolbar-btn--disabled):active {
     background-color: var(--remove-active); /* Darker red for active state */
     padding: 0 56px;
-    transition: all 0.25s ease;
+    transition: all 0.20s ease;
     border-radius: 100px;
 }
 
@@ -435,6 +651,67 @@ body.clear-confirm-mode .toolbar-btn:not(#clearBtn).toolbar-btn--disabled {
 
 body.standalone-mode .toolbar {
     padding-bottom: max(48px, env(safe-area-inset-bottom) + 16px);
+}
+
+/* Local testing share preview (localhost only, controlled by app.js) */
+.local-share-preview-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1004;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 16px;
+    background: rgba(0, 0, 0, 0.55);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.18s ease;
+}
+
+.local-share-preview-overlay.local-share-preview-overlay--visible {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.local-share-preview-panel {
+    position: relative;
+    width: min(92vw, 560px);
+    max-height: 92vh;
+    padding: 12px;
+    border-radius: 16px;
+    background: var(--background);
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.25);
+}
+
+.local-share-preview-close {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    height: 36px;
+    padding: 0 12px;
+    border: none;
+    border-radius: 18px;
+    background: var(--surface);
+    color: var(--primary);
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    touch-action: manipulation;
+}
+
+.local-share-preview-close:active {
+    background: var(--surface-active);
+}
+
+.local-share-preview-image {
+    display: block;
+    width: 100%;
+    max-height: calc(92vh - 24px);
+    margin-top: 28px;
+    border-radius: 10px;
+    object-fit: contain;
+    background: #fff;
 }
 
 /* Splash Screen Styles */
@@ -530,14 +807,14 @@ body.standalone-mode .toolbar {
     height: 48px;
     padding: 0 16px;
     background-color: var(--brand);
-    transition: all 0.25s ease;
+    transition: all 0.20s ease;
     border-radius: 100px;
 }
 
 .got-it-btn:active {
     padding: 0 20px;
     background-color: var(--brand-active);
-    transition: all 0.25s ease;
+    transition: all 0.20s ease;
     border-radius: 100px;
 }
 
